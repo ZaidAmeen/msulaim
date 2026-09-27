@@ -95,6 +95,7 @@ function NewVoucher() {
 function ClientForm() {
   const qc = useQueryClient();
   const router = useRouter();
+  const { data: board } = useSuspenseQuery(boardQuery);
   const [form, setForm] = useState({
     voucherNo: "",
     clientName: "",
@@ -105,6 +106,19 @@ function ClientForm() {
     notes: "",
   });
   const [done, setDone] = useState(false);
+
+  const clients = withExisting(
+    CLIENTS,
+    board.clientVouchers.map((v) => v.clientName),
+  );
+  const items = withExisting(
+    ITEMS,
+    board.clientVouchers.map((v) => v.item),
+  );
+  const processes = withExisting(
+    PROCESSES,
+    board.clientVouchers.map((v) => v.process),
+  );
 
   const mutation = useMutation({
     mutationFn: () => addClientVoucher({ data: form }),
@@ -118,16 +132,31 @@ function ClientForm() {
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
+  const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: digitsOnly(e.target.value) });
 
   return (
     <div className="frost rounded-2xl p-4 space-y-3">
       <div>
         <Label>Voucher number</Label>
-        <input className="field" value={form.voucherNo} onChange={set("voucherNo")} />
+        <input
+          className="field"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="e.g. 1001"
+          value={form.voucherNo}
+          onChange={setNum("voucherNo")}
+        />
       </div>
       <div>
         <Label>Client name</Label>
-        <input className="field" value={form.clientName} onChange={set("clientName")} />
+        <Select
+          value={form.clientName}
+          onChange={set("clientName")}
+          options={clients}
+          placeholder="Select a client…"
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -136,21 +165,40 @@ function ClientForm() {
         </div>
         <div>
           <Label>Quantity</Label>
-          <input className="field" value={form.quantity} onChange={set("quantity")} />
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.quantity}
+            onChange={setNum("quantity")}
+          />
         </div>
       </div>
       <div>
         <Label>Item</Label>
-        <input className="field" value={form.item} onChange={set("item")} />
+        <Select
+          value={form.item}
+          onChange={set("item")}
+          options={items}
+          placeholder="Select an item…"
+        />
       </div>
       <div>
         <Label>Process</Label>
-        <input className="field" value={form.process} onChange={set("process")} />
+        <Select
+          value={form.process}
+          onChange={set("process")}
+          options={processes}
+          placeholder="Select a process…"
+        />
       </div>
       <div>
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
       </div>
+
 
       <button
         disabled={mutation.isPending || !form.voucherNo || !form.clientName || !form.item}
