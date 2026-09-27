@@ -260,6 +260,9 @@ function DeliveryForm() {
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
+  const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: digitsOnly(e.target.value) });
+
 
   return (
     <div className="frost rounded-2xl p-4 space-y-3">
