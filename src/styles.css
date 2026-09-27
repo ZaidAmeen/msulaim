@@ -59,7 +59,21 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-frost: var(--frost);
+  --color-frostline: var(--frostline);
+  --color-ink: var(--ink);
+  --color-inkmuted: var(--inkmuted);
+  --color-brand: var(--brand);
+  --color-branddeep: var(--branddeep);
+  --color-teal: var(--teal);
+  --color-tealdeep: var(--tealdeep);
+
+  --color-warn: var(--warn);
+  --color-warnsoft: var(--warnsoft);
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Manrope", sans-serif;
 }
+
 
 :root {
   --radius: 0.625rem;
@@ -95,7 +109,63 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+
+  /* VoucherLink — frosted glass ledger */
+  --frost: oklch(0.9753 0.0074 260.73);
+  --frostline: oklch(0.8705 0.0398 256.59);
+  --ink: oklch(0.2566 0.0691 260.31);
+  --inkmuted: oklch(0.558 0.064 262.93);
+  --brand: oklch(0.5682 0.2103 262.93);
+  --branddeep: oklch(0.4055 0.1603 264.19);
+  --teal: oklch(0.7391 0.1369 175.25);
+  --tealdeep: oklch(0.5816 0.107 175.74);
+  --warn: oklch(0.7227 0.1606 55.14);
+  --warnsoft: oklch(0.9439 0.03 65.84);
+  --primary: var(--brand);
+  --primary-foreground: oklch(1 0 0);
+  --ring: var(--brand);
 }
+
+@layer components {
+  .frost {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.6));
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgb(255 255 255 / 0.6);
+  }
+
+  .glass {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.4));
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    border: 1px solid rgb(255 255 255 / 0.5);
+  }
+
+  .appbg {
+    background:
+      radial-gradient(120% 40% at 15% 0%, #dcecff 0%, rgba(220, 236, 255, 0) 55%),
+      radial-gradient(120% 40% at 100% 0%, #e6f2f0 0%, rgba(230, 242, 240, 0) 50%),
+      linear-gradient(180deg, #eef3fb 0%, #f6f9fd 45%, #e9f0fb 100%);
+    background-attachment: fixed;
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 0.875rem;
+    background: rgb(255 255 255 / 0.75);
+    border: 1px solid var(--frostline);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    color: var(--ink);
+    outline: none;
+  }
+
+  .field:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 18%, transparent);
+  }
+}
+
 
 .dark {
   --background: oklch(0.129 0.042 264.695);
