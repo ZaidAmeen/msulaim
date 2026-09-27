@@ -302,7 +302,15 @@ function DeliveryForm() {
 
       <div>
         <Label>Delivery voucher number</Label>
-        <input className="field" value={form.deliveryNo} onChange={set("deliveryNo")} />
+        <input
+          className="field"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="e.g. 5001"
+          value={form.deliveryNo}
+          onChange={setNum("deliveryNo")}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -311,9 +319,18 @@ function DeliveryForm() {
         </div>
         <div>
           <Label>Quantity delivered</Label>
-          <input className="field" value={form.quantity} onChange={set("quantity")} />
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.quantity}
+            onChange={setNum("quantity")}
+          />
         </div>
       </div>
+
       <div>
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
