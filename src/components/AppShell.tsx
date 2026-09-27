@@ -16,7 +16,7 @@ function NavItem({
     <Link
       to={to}
       className={`flex flex-col items-center gap-1 px-3 py-1.5 ${
-        active ? "text-brand" : "text-muted"
+        active ? "text-brand" : "text-inkmuted"
       }`}
     >
       <span className="text-[16px]">{glyph}</span>
@@ -47,7 +47,7 @@ export function AppShell({
                 <div className="font-display text-[15px] font-semibold tracking-tight">
                   VoucherLink
                 </div>
-                <div className="text-[10px] text-muted -mt-0.5">{subtitle ?? "Google Sheets"}</div>
+                <div className="text-[10px] text-inkmuted -mt-0.5">{subtitle ?? "Google Sheets"}</div>
               </div>
             </div>
             <div className="size-9 rounded-full glass grid place-items-center text-[13px] font-semibold">
