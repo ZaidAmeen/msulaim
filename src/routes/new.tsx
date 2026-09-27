@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
 import { addClientVoucher, addDeliveryVoucher } from "@/lib/vouchers.functions";
 import { deliveriesFor, num } from "@/lib/voucher-utils";
+import { CLIENTS, ITEMS, PROCESSES, withExisting } from "@/lib/options";
+
 
 export const Route = createFileRoute("/new")({
   head: () => ({
@@ -43,6 +45,32 @@ function Label({ children }: { children: string }) {
   );
 }
 
+function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (e: { target: { value: string } }) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  return (
+    <select className="field" value={value} onChange={onChange}>
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const digitsOnly = (v: string) => v.replace(/[^0-9]/g, "");
+
+
 function NewVoucher() {
   const [tab, setTab] = useState<"client" | "delivery">("client");
 
@@ -69,6 +97,7 @@ function NewVoucher() {
 function ClientForm() {
   const qc = useQueryClient();
   const router = useRouter();
+  const { data: board } = useSuspenseQuery(boardQuery);
   const [form, setForm] = useState({
     voucherNo: "",
     clientName: "",
@@ -79,6 +108,19 @@ function ClientForm() {
     notes: "",
   });
   const [done, setDone] = useState(false);
+
+  const clients = withExisting(
+    CLIENTS,
+    board.clientVouchers.map((v) => v.clientName),
+  );
+  const items = withExisting(
+    ITEMS,
+    board.clientVouchers.map((v) => v.item),
+  );
+  const processes = withExisting(
+    PROCESSES,
+    board.clientVouchers.map((v) => v.process),
+  );
 
   const mutation = useMutation({
     mutationFn: () => addClientVoucher({ data: form }),
@@ -92,16 +134,31 @@ function ClientForm() {
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
+  const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: digitsOnly(e.target.value) });
 
   return (
     <div className="frost rounded-2xl p-4 space-y-3">
       <div>
         <Label>Voucher number</Label>
-        <input className="field" value={form.voucherNo} onChange={set("voucherNo")} />
+        <input
+          className="field"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="e.g. 1001"
+          value={form.voucherNo}
+          onChange={setNum("voucherNo")}
+        />
       </div>
       <div>
         <Label>Client name</Label>
-        <input className="field" value={form.clientName} onChange={set("clientName")} />
+        <Select
+          value={form.clientName}
+          onChange={set("clientName")}
+          options={clients}
+          placeholder="Select a client…"
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -110,21 +167,40 @@ function ClientForm() {
         </div>
         <div>
           <Label>Quantity</Label>
-          <input className="field" value={form.quantity} onChange={set("quantity")} />
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.quantity}
+            onChange={setNum("quantity")}
+          />
         </div>
       </div>
       <div>
         <Label>Item</Label>
-        <input className="field" value={form.item} onChange={set("item")} />
+        <Select
+          value={form.item}
+          onChange={set("item")}
+          options={items}
+          placeholder="Select an item…"
+        />
       </div>
       <div>
         <Label>Process</Label>
-        <input className="field" value={form.process} onChange={set("process")} />
+        <Select
+          value={form.process}
+          onChange={set("process")}
+          options={processes}
+          placeholder="Select a process…"
+        />
       </div>
       <div>
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
       </div>
+
 
       <button
         disabled={mutation.isPending || !form.voucherNo || !form.clientName || !form.item}
@@ -186,6 +262,9 @@ function DeliveryForm() {
 
   const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: e.target.value });
+  const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: digitsOnly(e.target.value) });
+
 
   return (
     <div className="frost rounded-2xl p-4 space-y-3">
@@ -225,7 +304,15 @@ function DeliveryForm() {
 
       <div>
         <Label>Delivery voucher number</Label>
-        <input className="field" value={form.deliveryNo} onChange={set("deliveryNo")} />
+        <input
+          className="field"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="e.g. 5001"
+          value={form.deliveryNo}
+          onChange={setNum("deliveryNo")}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -234,9 +321,18 @@ function DeliveryForm() {
         </div>
         <div>
           <Label>Quantity delivered</Label>
-          <input className="field" value={form.quantity} onChange={set("quantity")} />
+          <input
+            className="field"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.quantity}
+            onChange={setNum("quantity")}
+          />
         </div>
       </div>
+
       <div>
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
