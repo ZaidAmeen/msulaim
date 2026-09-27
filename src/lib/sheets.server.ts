@@ -28,7 +28,7 @@ async function handle(res: Response) {
 
 export async function readRange(range: string): Promise<string[][]> {
   const res = await fetch(
-    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueRenderOption=UNFORMATTED_VALUE`,
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values/${range}?valueRenderOption=FORMATTED_VALUE`,
     { headers: headers() },
   );
   const json = (await handle(res)) as { values?: unknown[][] };
@@ -37,7 +37,7 @@ export async function readRange(range: string): Promise<string[][]> {
 
 export async function appendRow(sheet: string, values: (string | number)[]) {
   const res = await fetch(
-    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values/${sheet}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values/${sheet}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
     { method: "POST", headers: headers(), body: JSON.stringify({ values: [values] }) },
   );
   return handle(res);
