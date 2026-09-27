@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
 import { addClientVoucher, addDeliveryVoucher } from "@/lib/vouchers.functions";
 import { deliveriesFor, num } from "@/lib/voucher-utils";
+import { CLIENTS, ITEMS, PROCESSES, withExisting } from "@/lib/options";
+
 
 export const Route = createFileRoute("/new")({
   head: () => ({
