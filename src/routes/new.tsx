@@ -43,6 +43,32 @@ function Label({ children }: { children: string }) {
   );
 }
 
+function Select({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (e: { target: { value: string } }) => void;
+  options: string[];
+  placeholder: string;
+}) {
+  return (
+    <select className="field" value={value} onChange={onChange}>
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const digitsOnly = (v: string) => v.replace(/[^0-9]/g, "");
+
+
 function NewVoucher() {
   const [tab, setTab] = useState<"client" | "delivery">("client");
 
