@@ -62,11 +62,12 @@
   --color-frost: var(--frost);
   --color-frostline: var(--frostline);
   --color-ink: var(--ink);
-  --color-muted: var(--muted);
+  --color-inkmuted: var(--inkmuted);
   --color-brand: var(--brand);
   --color-branddeep: var(--branddeep);
-  --color-accent: var(--accent);
-  --color-accentdeep: var(--accentdeep);
+  --color-teal: var(--teal);
+  --color-tealdeep: var(--tealdeep);
+
   --color-warn: var(--warn);
   --color-warnsoft: var(--warnsoft);
   --font-display: "Space Grotesk", sans-serif;
