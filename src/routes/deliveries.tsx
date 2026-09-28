@@ -73,12 +73,21 @@ function Deliveries() {
               <span className="ml-auto text-[11px] text-inkmuted font-normal">{d.date}</span>
             </div>
             <div className="h-px bg-frostline/40 my-3" />
-            <div className="flex items-center justify-between text-[12px]">
-              <span className="text-inkmuted truncate">
-                {d.clientName}
-                {d.item ? ` · ${d.item}` : ""}
-              </span>
-              <span className="font-semibold text-ink">Qty {d.quantity || "—"}</span>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
+              <span className="text-inkmuted">Client</span>
+              <span className="font-semibold text-right truncate">{d.clientName || "—"}</span>
+              <span className="text-inkmuted">Item</span>
+              <span className="font-semibold text-right truncate">{d.item || "—"}</span>
+              <span className="text-inkmuted">Process</span>
+              <span className="font-semibold text-right truncate">{d.process || "—"}</span>
+              <span className="text-inkmuted">Qty delivered</span>
+              <span className="font-semibold text-right">{d.quantity || "—"}</span>
+              {d.notes && (
+                <>
+                  <span className="text-inkmuted">Notes</span>
+                  <span className="text-right truncate">{d.notes}</span>
+                </>
+              )}
             </div>
           </article>
         ))}
