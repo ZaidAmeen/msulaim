@@ -237,6 +237,8 @@ function DeliveryForm() {
   const delivered = source
     ? deliveriesFor(board, source.voucherNo).reduce((s, d) => s + num(d.quantity), 0)
     : 0;
+  const remaining = source ? Math.max(0, num(source.quantity) - delivered) : 0;
+  const overLimit = !!source && num(form.quantity) > remaining;
 
   const mutation = useMutation({
     mutationFn: () =>

@@ -32,7 +32,15 @@ export const Route = createFileRoute("/reports")({
   notFoundComponent: () => <AppShell title="Not found">Nothing here.</AppShell>,
 });
 
-type Line = { client: string; item: string; process: string; quantity: number; vouchers: string[] };
+type Line = {
+  date: string;
+  deliveryNo: string;
+  clientVoucherNo: string;
+  client: string;
+  item: string;
+  process: string;
+  quantity: number;
+};
 
 function Reports() {
   const { data: board } = useSuspenseQuery(boardQuery);
@@ -44,24 +52,27 @@ function Reports() {
 
   const [month, setMonth] = useState(() => months[0] ?? monthKey(new Date().toISOString()));
 
-  const lines = useMemo<Line[]>(() => {
-    const map = new Map<string, Line>();
-    for (const d of board.deliveryVouchers) {
-      if (monthKey(d.date) !== month) continue;
-      const key = `${d.clientName}||${d.item}||${d.process}`;
-      const line = map.get(key) ?? {
-        client: d.clientName || "—",
-        item: d.item || "—",
-        process: d.process,
-        quantity: 0,
-        vouchers: [],
-      };
-      line.quantity += num(d.quantity);
-      line.vouchers.push(d.deliveryNo);
-      map.set(key, line);
-    }
-    return [...map.values()].sort((a, b) => a.client.localeCompare(b.client));
-  }, [board, month]);
+  const lines = useMemo<Line[]>(
+    () =>
+      board.deliveryVouchers
+        .filter((d) => monthKey(d.date) === month)
+        .map((d) => ({
+          date: d.date,
+          deliveryNo: d.deliveryNo,
+          clientVoucherNo: d.clientVoucherNo,
+          client: d.clientName || "—",
+          item: d.item || "—",
+          process: d.process || "—",
+          quantity: num(d.quantity),
+        }))
+        .sort(
+          (a, b) =>
+            a.client.localeCompare(b.client) ||
+            a.date.localeCompare(b.date) ||
+            a.clientVoucherNo.localeCompare(b.clientVoucherNo),
+        ),
+    [board, month],
+  );
 
   const byClient = useMemo(() => {
     const map = new Map<string, Line[]>();
@@ -71,8 +82,16 @@ function Reports() {
 
   function exportCsv() {
     const rows = [
-      ["Client", "Item", "Process", "Quantity delivered", "Delivery vouchers"],
-      ...lines.map((l) => [l.client, l.item, l.process, String(l.quantity), l.vouchers.join(" ")]),
+      ["Client", "Date", "Delivery voucher", "Client voucher", "Item", "Process", "Quantity"],
+      ...lines.map((l) => [
+        l.client,
+        l.date,
+        l.deliveryNo,
+        l.clientVoucherNo,
+        l.item,
+        l.process,
+        String(l.quantity),
+      ]),
     ];
     const csv = rows
       .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))
@@ -84,6 +103,9 @@ function Reports() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
+  const th = "text-left px-2 py-2 text-[10px] uppercase tracking-[0.08em] text-inkmuted font-semibold whitespace-nowrap";
+  const td = "px-2 py-2 whitespace-nowrap";
 
   return (
     <AppShell title="Month end" subtitle="Delivered per client">
@@ -104,27 +126,37 @@ function Reports() {
       <div className="space-y-2.5">
         {byClient.map(([client, clientLines]) => (
           <article key={client} className="frost rounded-2xl p-4 shadow-[0_14px_30px_-18px_#0e224440]">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <span className="font-display text-[14px] font-semibold">{client}</span>
               <span className="text-[11px] text-tealdeep font-semibold">
                 {clientLines.reduce((s, l) => s + l.quantity, 0)} delivered
               </span>
             </div>
-            <div className="space-y-2">
-              {clientLines.map((l) => (
-                <div key={`${l.item}-${l.process}`} className="text-[12px]">
-                  <div className="flex justify-between">
-                    <span className="text-inkmuted truncate">
-                      {l.item}
-                      {l.process ? ` · ${l.process}` : ""}
-                    </span>
-                    <span className="font-semibold">{l.quantity}</span>
-                  </div>
-                  <div className="text-[10px] text-inkmuted font-mono truncate">
-                    {l.vouchers.join(", ")}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-frostline/50">
+                    <th className={th}>Date</th>
+                    <th className={th}>Delivery no.</th>
+                    <th className={th}>Client voucher</th>
+                    <th className={th}>Item</th>
+                    <th className={th}>Process</th>
+                    <th className={`${th} text-right`}>Qty</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientLines.map((l, i) => (
+                    <tr key={`${l.deliveryNo}-${i}`} className="border-b border-frostline/30 last:border-0">
+                      <td className={td}>{l.date}</td>
+                      <td className={`${td} font-mono text-brand`}>{l.deliveryNo}</td>
+                      <td className={`${td} font-mono`}>{l.clientVoucherNo}</td>
+                      <td className={td}>{l.item}</td>
+                      <td className={td}>{l.process}</td>
+                      <td className={`${td} text-right font-semibold`}>{l.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </article>
         ))}
