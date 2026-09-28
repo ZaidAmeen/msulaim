@@ -1,31 +1,10 @@
 // Preset lists used by the voucher forms.
-// Edit these lists to match your business.
 
-export const CLIENTS = [
-  "Northwind Coffee Co.",
-  "Apex Textiles",
-  "Blue River Garments",
-  "Crescent Apparel",
-  "Delta Fabrics",
-] as const;
+export const CLIENTS = ["KSS", "Rathod Fashions"] as const;
 
-export const ITEMS = [
-  "Cotton Shirts",
-  "Trousers",
-  "T-Shirts",
-  "Denim Jackets",
-  "Bed Sheets",
-  "Towels",
-] as const;
+export const ITEMS = ["Crape", "Semi Chinnon", "Art Fancy"] as const;
 
-export const PROCESSES = [
-  "Dyeing",
-  "Printing",
-  "Washing",
-  "Stitching",
-  "Finishing",
-  "Packing",
-] as const;
+export const PROCESSES = ["Finishing", "Blouse Stitch", "Piping", "Return", "Tassels"] as const;
 
 /** Preset list plus any values already saved in the sheet, de-duplicated. */
 export function withExisting(preset: readonly string[], existing: string[]): string[] {
