@@ -117,10 +117,6 @@ function ClientForm() {
     ITEMS,
     board.clientVouchers.map((v) => v.item),
   );
-  const processes = withExisting(
-    PROCESSES,
-    board.clientVouchers.map((v) => v.process),
-  );
 
   const mutation = useMutation({
     mutationFn: () => addClientVoucher({ data: form }),
@@ -185,15 +181,6 @@ function ClientForm() {
           onChange={set("item")}
           options={items}
           placeholder="Select an item…"
-        />
-      </div>
-      <div>
-        <Label>Process</Label>
-        <Select
-          value={form.process}
-          onChange={set("process")}
-          options={processes}
-          placeholder="Select a process…"
         />
       </div>
       <div>
