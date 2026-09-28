@@ -237,6 +237,8 @@ function DeliveryForm() {
   const delivered = source
     ? deliveriesFor(board, source.voucherNo).reduce((s, d) => s + num(d.quantity), 0)
     : 0;
+  const remaining = source ? Math.max(0, num(source.quantity) - delivered) : 0;
+  const overLimit = !!source && num(form.quantity) > remaining;
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -337,9 +339,24 @@ function DeliveryForm() {
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
       </div>
+      <div>
+        {source && (
+          <p className={`text-[12px] font-semibold ${overLimit ? "text-warn" : "text-inkmuted"}`}>
+            {overLimit
+              ? `Too much — only ${remaining} left to deliver on this voucher.`
+              : `Up to ${remaining} can be delivered.`}
+          </p>
+        )}
+      </div>
 
       <button
-        disabled={mutation.isPending || !form.deliveryNo || !form.clientVoucherNo}
+        disabled={
+          mutation.isPending ||
+          !form.deliveryNo ||
+          !form.clientVoucherNo ||
+          !form.quantity ||
+          overLimit
+        }
         onClick={() => {
           setDone(false);
           mutation.mutate();

@@ -108,7 +108,25 @@ const deliverySchema = z.object({
 export const addDeliveryVoucher = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => deliverySchema.parse(d))
   .handler(async ({ data }) => {
-    const { appendRow, DELIVERY_SHEET } = await import("./sheets.server");
+    const { appendRow, readRange, CLIENT_SHEET, DELIVERY_SHEET } = await import("./sheets.server");
+    const toNum = (v: string | undefined) => {
+      const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+      return Number.isFinite(n) ? n : 0;
+    };
+    const key = data.clientVoucherNo.trim().toLowerCase();
+    const [cRows, dRows] = await Promise.all([
+      readRange(`${CLIENT_SHEET}!A2:F`),
+      readRange(`${DELIVERY_SHEET}!A2:G`),
+    ]);
+    const src = cRows.find((r) => (r[0] ?? "").trim().toLowerCase() === key);
+    if (!src) throw new Error(`Client voucher ${data.clientVoucherNo} not found.`);
+    const already = dRows
+      .filter((r) => (r[1] ?? "").trim().toLowerCase() === key)
+      .reduce((s, r) => s + toNum(r[6]), 0);
+    const remaining = toNum(src[5]) - already;
+    if (toNum(data.quantity) <= 0) throw new Error("Enter a quantity greater than 0.");
+    if (toNum(data.quantity) > remaining)
+      throw new Error(`Only ${Math.max(0, remaining)} left to deliver on voucher ${data.clientVoucherNo}.`);
     await appendRow(DELIVERY_SHEET, [
       data.deliveryNo,
       data.clientVoucherNo,
