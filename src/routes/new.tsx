@@ -269,11 +269,18 @@ function DeliveryForm() {
           }
         >
           <option value="">Select a client voucher…</option>
-          {board.clientVouchers.map((v) => (
-            <option key={v.voucherNo} value={v.voucherNo}>
-              {v.voucherNo} · {v.clientName}
-            </option>
-          ))}
+          {board.clientVouchers
+            .filter(
+              (v) =>
+                num(v.quantity) -
+                  deliveriesFor(board, v.voucherNo).reduce((s, d) => s + num(d.quantity), 0) >
+                0,
+            )
+            .map((v) => (
+              <option key={v.voucherNo} value={v.voucherNo}>
+                {v.voucherNo} · {v.clientName}
+              </option>
+            ))}
         </select>
       </div>
 
