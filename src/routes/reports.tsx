@@ -53,6 +53,14 @@ function Reports() {
 
   const [month, setMonth] = useState(() => months[0] ?? monthKey(new Date().toISOString()));
 
+  const orderedByVoucher = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const v of board.clientVouchers) {
+      map.set(v.voucherNo.trim().toLowerCase(), num(v.quantity));
+    }
+    return map;
+  }, [board]);
+
   const lines = useMemo<Line[]>(
     () =>
       board.deliveryVouchers
@@ -64,6 +72,7 @@ function Reports() {
           client: d.clientName || "—",
           item: d.item || "—",
           process: d.process || "—",
+          ordered: orderedByVoucher.get(d.clientVoucherNo.trim().toLowerCase()) ?? null,
           quantity: num(d.quantity),
         }))
         .sort(
@@ -72,7 +81,7 @@ function Reports() {
             a.date.localeCompare(b.date) ||
             a.clientVoucherNo.localeCompare(b.clientVoucherNo),
         ),
-    [board, month],
+    [board, month, orderedByVoucher],
   );
 
   const byClient = useMemo(() => {
