@@ -92,7 +92,16 @@ function Reports() {
 
   function exportCsv() {
     const rows = [
-      ["Client", "Date", "Delivery voucher", "Client voucher", "Item", "Process", "Quantity"],
+      [
+        "Client",
+        "Date",
+        "Delivery voucher",
+        "Client voucher",
+        "Item",
+        "Process",
+        "Ordered quantity",
+        "Delivered quantity",
+      ],
       ...lines.map((l) => [
         l.client,
         l.date,
@@ -100,6 +109,7 @@ function Reports() {
         l.clientVoucherNo,
         l.item,
         l.process,
+        l.ordered === null ? "" : String(l.ordered),
         String(l.quantity),
       ]),
     ];
