@@ -307,13 +307,6 @@ function DeliveryForm() {
             <span className="font-semibold">{source.clientName}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-inkmuted">Item · process</span>
-            <span className="font-semibold">
-              {source.item}
-              {source.process ? ` · ${source.process}` : ""}
-            </span>
-          </div>
-          <div className="flex justify-between">
             <span className="text-inkmuted">Delivered so far</span>
             <span className="font-semibold">
               {delivered} of {source.quantity || "—"}
@@ -372,6 +365,8 @@ function DeliveryForm() {
           mutation.isPending ||
           !form.deliveryNo ||
           !form.clientVoucherNo ||
+          !form.item ||
+          !form.process ||
           !form.quantity ||
           overLimit
         }
