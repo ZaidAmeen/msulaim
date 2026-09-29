@@ -39,6 +39,7 @@ type Line = {
   client: string;
   item: string;
   process: string;
+  ordered: number | null;
   quantity: number;
 };
 
