@@ -146,12 +146,17 @@ function Reports() {
       <div className="space-y-2.5">
         {byClient.map(([client, clientLines]) => (
           <article key={client} className="frost rounded-2xl p-4 shadow-[0_14px_30px_-18px_#0e224440]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-display text-[14px] font-semibold">{client}</span>
-              <span className="text-[11px] text-tealdeep font-semibold">
-                {clientLines.reduce((s, l) => s + l.quantity, 0)} delivered
-              </span>
-            </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-display text-[14px] font-semibold">{client}</span>
+                <span className="text-[11px] text-tealdeep font-semibold">
+                  {clientLines.reduce((s, l) => s + l.quantity, 0)} of{" "}
+                  {[...new Set(clientLines.map((l) => l.clientVoucherNo.trim().toLowerCase()))].reduce(
+                    (s, v) => s + (orderedByVoucher.get(v) ?? 0),
+                    0,
+                  )}{" "}
+                  delivered
+                </span>
+              </div>
             <div className="overflow-x-auto -mx-2">
               <table className="w-full text-[12px]">
                 <thead>
@@ -161,7 +166,8 @@ function Reports() {
                     <th className={th}>Client voucher</th>
                     <th className={th}>Item</th>
                     <th className={th}>Process</th>
-                    <th className={`${th} text-right`}>Qty</th>
+                    <th className={`${th} text-right`}>Ordered</th>
+                    <th className={`${th} text-right`}>Delivered</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -172,6 +178,9 @@ function Reports() {
                       <td className={`${td} font-mono`}>{l.clientVoucherNo}</td>
                       <td className={td}>{l.item}</td>
                       <td className={td}>{l.process}</td>
+                      <td className={`${td} text-right text-inkmuted`}>
+                        {l.ordered === null ? "—" : l.ordered}
+                      </td>
                       <td className={`${td} text-right font-semibold`}>{l.quantity}</td>
                     </tr>
                   ))}
