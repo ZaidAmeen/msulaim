@@ -39,6 +39,7 @@ type Line = {
   client: string;
   item: string;
   process: string;
+  ordered: number | null;
   quantity: number;
 };
 
@@ -52,6 +53,14 @@ function Reports() {
 
   const [month, setMonth] = useState(() => months[0] ?? monthKey(new Date().toISOString()));
 
+  const orderedByVoucher = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const v of board.clientVouchers) {
+      map.set(v.voucherNo.trim().toLowerCase(), num(v.quantity));
+    }
+    return map;
+  }, [board]);
+
   const lines = useMemo<Line[]>(
     () =>
       board.deliveryVouchers
@@ -63,6 +72,7 @@ function Reports() {
           client: d.clientName || "—",
           item: d.item || "—",
           process: d.process || "—",
+          ordered: orderedByVoucher.get(d.clientVoucherNo.trim().toLowerCase()) ?? null,
           quantity: num(d.quantity),
         }))
         .sort(
@@ -71,7 +81,7 @@ function Reports() {
             a.date.localeCompare(b.date) ||
             a.clientVoucherNo.localeCompare(b.clientVoucherNo),
         ),
-    [board, month],
+    [board, month, orderedByVoucher],
   );
 
   const byClient = useMemo(() => {
@@ -82,7 +92,16 @@ function Reports() {
 
   function exportCsv() {
     const rows = [
-      ["Client", "Date", "Delivery voucher", "Client voucher", "Item", "Process", "Quantity"],
+      [
+        "Client",
+        "Date",
+        "Delivery voucher",
+        "Client voucher",
+        "Item",
+        "Process",
+        "Ordered quantity",
+        "Delivered quantity",
+      ],
       ...lines.map((l) => [
         l.client,
         l.date,
@@ -90,6 +109,7 @@ function Reports() {
         l.clientVoucherNo,
         l.item,
         l.process,
+        l.ordered === null ? "" : String(l.ordered),
         String(l.quantity),
       ]),
     ];
@@ -126,12 +146,17 @@ function Reports() {
       <div className="space-y-2.5">
         {byClient.map(([client, clientLines]) => (
           <article key={client} className="frost rounded-2xl p-4 shadow-[0_14px_30px_-18px_#0e224440]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-display text-[14px] font-semibold">{client}</span>
-              <span className="text-[11px] text-tealdeep font-semibold">
-                {clientLines.reduce((s, l) => s + l.quantity, 0)} delivered
-              </span>
-            </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-display text-[14px] font-semibold">{client}</span>
+                <span className="text-[11px] text-tealdeep font-semibold">
+                  {clientLines.reduce((s, l) => s + l.quantity, 0)} of{" "}
+                  {[...new Set(clientLines.map((l) => l.clientVoucherNo.trim().toLowerCase()))].reduce(
+                    (s, v) => s + (orderedByVoucher.get(v) ?? 0),
+                    0,
+                  )}{" "}
+                  delivered
+                </span>
+              </div>
             <div className="overflow-x-auto -mx-2">
               <table className="w-full text-[12px]">
                 <thead>
@@ -141,7 +166,8 @@ function Reports() {
                     <th className={th}>Client voucher</th>
                     <th className={th}>Item</th>
                     <th className={th}>Process</th>
-                    <th className={`${th} text-right`}>Qty</th>
+                    <th className={`${th} text-right`}>Ordered</th>
+                    <th className={`${th} text-right`}>Delivered</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,6 +178,9 @@ function Reports() {
                       <td className={`${td} font-mono`}>{l.clientVoucherNo}</td>
                       <td className={td}>{l.item}</td>
                       <td className={td}>{l.process}</td>
+                      <td className={`${td} text-right text-inkmuted`}>
+                        {l.ordered === null ? "—" : l.ordered}
+                      </td>
                       <td className={`${td} text-right font-semibold`}>{l.quantity}</td>
                     </tr>
                   ))}
