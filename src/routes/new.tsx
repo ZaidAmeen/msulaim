@@ -215,6 +215,8 @@ function DeliveryForm() {
     deliveryNo: "",
     clientVoucherNo: "",
     date: today(),
+    item: "",
+    process: "",
     quantity: "",
     notes: "",
   });
@@ -235,8 +237,8 @@ function DeliveryForm() {
           clientVoucherNo: form.clientVoucherNo,
           clientName: source?.clientName ?? "",
           date: form.date,
-          item: source?.item ?? "",
-          process: source?.process ?? "",
+          item: form.item,
+          process: form.process,
           quantity: form.quantity,
           notes: form.notes,
         },
@@ -259,7 +261,13 @@ function DeliveryForm() {
     <div className="frost rounded-2xl p-4 space-y-3">
       <div>
         <Label>Client voucher</Label>
-        <select className="field" value={form.clientVoucherNo} onChange={set("clientVoucherNo")}>
+        <select
+          className="field"
+          value={form.clientVoucherNo}
+          onChange={(e) =>
+            setForm({ ...form, clientVoucherNo: e.target.value, item: "", process: "" })
+          }
+        >
           <option value="">Select a client voucher…</option>
           {board.clientVouchers.map((v) => (
             <option key={v.voucherNo} value={v.voucherNo}>
@@ -270,17 +278,33 @@ function DeliveryForm() {
       </div>
 
       {source && (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Item</Label>
+            <Select
+              value={form.item}
+              onChange={set("item")}
+              options={source.item ? [source.item] : []}
+              placeholder="Select item…"
+            />
+          </div>
+          <div>
+            <Label>Process</Label>
+            <Select
+              value={form.process}
+              onChange={set("process")}
+              options={[...PROCESSES]}
+              placeholder="Select process…"
+            />
+          </div>
+        </div>
+      )}
+
+      {source && (
         <div className="rounded-2xl bg-frostline/30 p-3 text-[12px] space-y-1">
           <div className="flex justify-between">
             <span className="text-inkmuted">Client</span>
             <span className="font-semibold">{source.clientName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-inkmuted">Item · process</span>
-            <span className="font-semibold">
-              {source.item}
-              {source.process ? ` · ${source.process}` : ""}
-            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-inkmuted">Delivered so far</span>
@@ -341,6 +365,8 @@ function DeliveryForm() {
           mutation.isPending ||
           !form.deliveryNo ||
           !form.clientVoucherNo ||
+          !form.item ||
+          !form.process ||
           !form.quantity ||
           overLimit
         }
