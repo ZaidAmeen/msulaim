@@ -207,3 +207,210 @@ function ClientForm() {
   );
 }
 
+function DeliveryForm() {
+  const { data: board } = useSuspenseQuery(boardQuery);
+  const qc = useQueryClient();
+  const router = useRouter();
+  const blank = { finishing: "", returned: "", notes: "", deliveryNo: "" };
+  const [form, setForm] = useState({ clientVoucherNo: "", date: today(), item: "", ...blank });
+  const [extras, setExtras] = useState<Record<string, string | undefined>>({});
+  const [done, setDone] = useState(false);
+
+  const source = board.clientVouchers.find((v) => v.voucherNo === form.clientVoucherNo);
+  const delivered = source ? baseDelivered(board, source.voucherNo) : 0;
+  const remaining = source ? Math.max(0, num(source.quantity) - delivered) : 0;
+  const baseNow = num(form.finishing) + num(form.returned);
+  const overLimit = !!source && baseNow > remaining;
+
+  const extraLines = Object.entries(extras).filter(([, q]) => q !== undefined) as [string, string][];
+  const lines = [
+    ...(num(form.finishing) > 0 ? [{ process: "Finishing", quantity: form.finishing }] : []),
+    ...(num(form.returned) > 0 ? [{ process: "Return", quantity: form.returned }] : []),
+    ...extraLines.filter(([, q]) => num(q) > 0).map(([process, quantity]) => ({ process, quantity })),
+  ];
+  const extrasIncomplete = extraLines.some(([, q]) => num(q) <= 0);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      addDeliveryVoucher({
+        data: {
+          deliveryNo: form.deliveryNo,
+          clientVoucherNo: form.clientVoucherNo,
+          clientName: source?.clientName ?? "",
+          date: form.date,
+          item: form.item,
+          notes: form.notes,
+          lines,
+        },
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["board"] });
+      router.invalidate();
+      setForm({ ...form, ...blank });
+      setExtras({});
+      setDone(true);
+    },
+  });
+
+  const set = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: e.target.value });
+  const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
+    setForm({ ...form, [k]: digitsOnly(e.target.value) });
+
+  return (
+    <div className="frost rounded-2xl p-4 space-y-3">
+      <div>
+        <Label>Client voucher</Label>
+        <select
+          className="field"
+          value={form.clientVoucherNo}
+          onChange={(e) => setForm({ ...form, clientVoucherNo: e.target.value, item: "" })}
+        >
+          <option value="">Select a client voucher…</option>
+          {board.clientVouchers
+            .filter((v) => num(v.quantity) - baseDelivered(board, v.voucherNo) > 0)
+            .map((v) => (
+              <option key={v.voucherNo} value={v.voucherNo}>
+                {v.voucherNo} · {v.clientName}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      {source && (
+        <>
+          <div>
+            <Label>Item</Label>
+            <Select
+              value={form.item}
+              onChange={set("item")}
+              options={source.item ? [source.item] : []}
+              placeholder="Select item…"
+            />
+          </div>
+          <div className="rounded-2xl bg-frostline/30 p-3 text-[12px] space-y-1">
+            <div className="flex justify-between">
+              <span className="text-inkmuted">Client</span>
+              <span className="font-semibold">{source.clientName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-inkmuted">Sarees delivered so far</span>
+              <span className="font-semibold">
+                {delivered} of {source.quantity || "—"}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
+
+      <div>
+        <Label>Delivery voucher number</Label>
+        <input
+          className="field"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="e.g. 5001"
+          value={form.deliveryNo}
+          onChange={setNum("deliveryNo")}
+        />
+      </div>
+      <div>
+        <Label>Date</Label>
+        <input type="date" className="field" value={form.date} onChange={set("date")} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Finishing qty</Label>
+          <input
+            className="field"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.finishing}
+            onChange={setNum("finishing")}
+          />
+        </div>
+        <div>
+          <Label>Return qty (optional)</Label>
+          <input
+            className="field"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.returned}
+            onChange={setNum("returned")}
+          />
+        </div>
+      </div>
+      {source && (
+        <p className={`text-[12px] font-semibold ${overLimit ? "text-warn" : "text-inkmuted"}`}>
+          {overLimit
+            ? `Too much — only ${remaining} sarees left (finishing + return).`
+            : `Up to ${remaining} sarees can be delivered (finishing + return).`}
+        </p>
+      )}
+
+      <div>
+        <Label>Additional work (optional)</Label>
+        <div className="space-y-2">
+          {EXTRA_PROCESSES.map((p) => {
+            const on = extras[p] !== undefined;
+            return (
+              <div key={p} className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-[13px] flex-1">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => setExtras({ ...extras, [p]: e.target.checked ? "" : undefined })}
+                  />
+                  {p}
+                </label>
+                {on && (
+                  <input
+                    className="field max-w-[110px]"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Qty"
+                    aria-label={`${p} quantity`}
+                    value={extras[p]}
+                    onChange={(e) => setExtras({ ...extras, [p]: digitsOnly(e.target.value) })}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <Label>Notes</Label>
+        <input className="field" value={form.notes} onChange={set("notes")} />
+      </div>
+
+      <button
+        disabled={
+          mutation.isPending ||
+          !form.deliveryNo ||
+          !form.clientVoucherNo ||
+          !form.item ||
+          lines.length === 0 ||
+          extrasIncomplete ||
+          overLimit
+        }
+        onClick={() => {
+          setDone(false);
+          mutation.mutate();
+        }}
+        className="w-full py-3 rounded-2xl bg-brand text-primary-foreground font-display font-semibold shadow-[0_10px_24px_-10px_var(--brand)] disabled:opacity-50"
+      >
+        {mutation.isPending ? "Saving…" : "Issue delivery voucher"}
+      </button>
+      {done && <p className="text-[12px] text-tealdeep font-semibold">Linked and saved.</p>}
+      {mutation.isError && (
+        <p className="text-[12px] text-warn font-semibold">{(mutation.error as Error).message}</p>
+      )}
+    </div>
+  );
+}
