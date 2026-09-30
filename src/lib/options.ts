@@ -18,3 +18,13 @@ export function withExisting(preset: readonly string[], existing: string[]): str
   }
   return out;
 }
+
+/** Processes that count toward physical sarees delivered. */
+export const BASE_PROCESSES = ["Finishing", "Return"] as const;
+/** Additional work — recorded but does not reduce the remaining quantity. */
+export const EXTRA_PROCESSES = ["Blouse Stitch", "Piping", "Tassels"] as const;
+
+export function isBaseProcess(p: string): boolean {
+  const t = p.trim().toLowerCase();
+  return t === "" || t === "finishing" || t === "return";
+}

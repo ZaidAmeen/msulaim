@@ -1,4 +1,5 @@
 import type { Board, ClientVoucher, DeliveryVoucher } from "./vouchers.functions";
+import { isBaseProcess } from "./options";
 
 export function deliveriesFor(board: Board, voucherNo: string): DeliveryVoucher[] {
   return board.deliveryVouchers.filter(
@@ -17,7 +18,7 @@ export function statusOf(board: Board, v: ClientVoucher): Status {
   const linked = deliveriesFor(board, v.voucherNo);
   if (linked.length === 0) return "pending";
   const ordered = num(v.quantity);
-  const delivered = linked.reduce((sum, d) => sum + num(d.quantity), 0);
+  const delivered = baseDelivered(board, v.voucherNo);
   if (ordered > 0 && delivered < ordered) return "partial";
   return "linked";
 }
@@ -35,4 +36,11 @@ export function monthLabel(key: string): string {
   if (!y || !m) return key;
   const d = new Date(Number(y), Number(m) - 1, 1);
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
+
+/** Physical sarees delivered (Finishing + Return; untagged legacy rows count too). */
+export function baseDelivered(board: Board, voucherNo: string): number {
+  return deliveriesFor(board, voucherNo)
+    .filter((d) => isBaseProcess(d.process))
+    .reduce((s, d) => s + num(d.quantity), 0);
 }
