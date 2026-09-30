@@ -100,18 +100,23 @@ const deliverySchema = z.object({
   clientName: z.string().default(""),
   date: z.string().min(1),
   item: z.string().default(""),
-  process: z.string().default(""),
-  quantity: z.string().default(""),
   notes: z.string().default(""),
+  lines: z
+    .array(z.object({ process: z.string().min(1), quantity: z.string().min(1) }))
+    .min(1),
 });
 
 export const addDeliveryVoucher = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => deliverySchema.parse(d))
   .handler(async ({ data }) => {
-    const { appendRow, readRange, CLIENT_SHEET, DELIVERY_SHEET } = await import("./sheets.server");
+    const { appendRows, readRange, CLIENT_SHEET, DELIVERY_SHEET } = await import("./sheets.server");
     const toNum = (v: string | undefined) => {
       const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
       return Number.isFinite(n) ? n : 0;
+    };
+    const isBase = (p: string | undefined) => {
+      const t = (p ?? "").trim().toLowerCase();
+      return t === "" || t === "finishing" || t === "return";
     };
     const key = data.clientVoucherNo.trim().toLowerCase();
     const [cRows, dRows] = await Promise.all([
@@ -120,23 +125,29 @@ export const addDeliveryVoucher = createServerFn({ method: "POST" })
     ]);
     const src = cRows.find((r) => (r[0] ?? "").trim().toLowerCase() === key);
     if (!src) throw new Error(`Client voucher ${data.clientVoucherNo} not found.`);
+    if (data.lines.some((l) => toNum(l.quantity) <= 0))
+      throw new Error("Enter quantities greater than 0.");
     const already = dRows
-      .filter((r) => (r[1] ?? "").trim().toLowerCase() === key)
+      .filter((r) => (r[1] ?? "").trim().toLowerCase() === key && isBase(r[5]))
       .reduce((s, r) => s + toNum(r[6]), 0);
     const remaining = toNum(src[5]) - already;
-    if (toNum(data.quantity) <= 0) throw new Error("Enter a quantity greater than 0.");
-    if (toNum(data.quantity) > remaining)
-      throw new Error(`Only ${Math.max(0, remaining)} left to deliver on voucher ${data.clientVoucherNo}.`);
-    await appendRow(DELIVERY_SHEET, [
-      data.deliveryNo,
-      data.clientVoucherNo,
-      data.clientName,
-      data.date,
-      data.item,
-      data.process,
-      data.quantity,
-      data.notes,
-      new Date().toISOString(),
-    ]);
+    const baseNow = data.lines.filter((l) => isBase(l.process)).reduce((s, l) => s + toNum(l.quantity), 0);
+    if (baseNow > remaining)
+      throw new Error(`Only ${Math.max(0, remaining)} sarees left to deliver on voucher ${data.clientVoucherNo}.`);
+    const now = new Date().toISOString();
+    await appendRows(
+      DELIVERY_SHEET,
+      data.lines.map((l) => [
+        data.deliveryNo,
+        data.clientVoucherNo,
+        data.clientName,
+        data.date,
+        data.item,
+        l.process,
+        l.quantity,
+        data.notes,
+        now,
+      ]),
+    );
     return { ok: true };
   });

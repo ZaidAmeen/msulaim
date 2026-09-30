@@ -42,3 +42,11 @@ export async function appendRow(sheet: string, values: (string | number)[]) {
   );
   return handle(res);
 }
+
+export async function appendRows(sheet: string, rows: (string | number)[][]) {
+  const res = await fetch(
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values/${sheet}!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    { method: "POST", headers: headers(), body: JSON.stringify({ values: rows }) },
+  );
+  return handle(res);
+}

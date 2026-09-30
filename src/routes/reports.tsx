@@ -1,3 +1,4 @@
+import { isBaseProcess } from "@/lib/options";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -149,7 +150,7 @@ function Reports() {
               <div className="flex items-center justify-between mb-2">
                 <span className="font-display text-[14px] font-semibold">{client}</span>
                 <span className="text-[11px] text-tealdeep font-semibold">
-                  {clientLines.reduce((s, l) => s + l.quantity, 0)} of{" "}
+                  {clientLines.filter((l) => isBaseProcess(l.process)).reduce((s, l) => s + l.quantity, 0)} of{" "}
                   {[...new Set(clientLines.map((l) => l.clientVoucherNo.trim().toLowerCase()))].reduce(
                     (s, v) => s + (orderedByVoucher.get(v) ?? 0),
                     0,

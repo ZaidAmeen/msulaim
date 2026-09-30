@@ -4,8 +4,8 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
 import { addClientVoucher, addDeliveryVoucher } from "@/lib/vouchers.functions";
-import { deliveriesFor, num } from "@/lib/voucher-utils";
-import { CLIENTS, ITEMS, PROCESSES, withExisting } from "@/lib/options";
+import { baseDelivered, num } from "@/lib/voucher-utils";
+import { CLIENTS, EXTRA_PROCESSES, ITEMS, withExisting } from "@/lib/options";
 
 
 export const Route = createFileRoute("/new")({
@@ -211,23 +211,24 @@ function DeliveryForm() {
   const { data: board } = useSuspenseQuery(boardQuery);
   const qc = useQueryClient();
   const router = useRouter();
-  const [form, setForm] = useState({
-    deliveryNo: "",
-    clientVoucherNo: "",
-    date: today(),
-    item: "",
-    process: "",
-    quantity: "",
-    notes: "",
-  });
+  const blank = { finishing: "", returned: "", notes: "", deliveryNo: "" };
+  const [form, setForm] = useState({ clientVoucherNo: "", date: today(), item: "", ...blank });
+  const [extras, setExtras] = useState<Record<string, string | undefined>>({});
   const [done, setDone] = useState(false);
 
   const source = board.clientVouchers.find((v) => v.voucherNo === form.clientVoucherNo);
-  const delivered = source
-    ? deliveriesFor(board, source.voucherNo).reduce((s, d) => s + num(d.quantity), 0)
-    : 0;
+  const delivered = source ? baseDelivered(board, source.voucherNo) : 0;
   const remaining = source ? Math.max(0, num(source.quantity) - delivered) : 0;
-  const overLimit = !!source && num(form.quantity) > remaining;
+  const baseNow = num(form.finishing) + num(form.returned);
+  const overLimit = !!source && baseNow > remaining;
+
+  const extraLines = Object.entries(extras).filter(([, q]) => q !== undefined) as [string, string][];
+  const lines = [
+    ...(num(form.finishing) > 0 ? [{ process: "Finishing", quantity: form.finishing }] : []),
+    ...(num(form.returned) > 0 ? [{ process: "Return", quantity: form.returned }] : []),
+    ...extraLines.filter(([, q]) => num(q) > 0).map(([process, quantity]) => ({ process, quantity })),
+  ];
+  const extrasIncomplete = extraLines.some(([, q]) => num(q) <= 0);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -238,15 +239,15 @@ function DeliveryForm() {
           clientName: source?.clientName ?? "",
           date: form.date,
           item: form.item,
-          process: form.process,
-          quantity: form.quantity,
           notes: form.notes,
+          lines,
         },
       }),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["board"] });
       router.invalidate();
-      setForm({ ...form, deliveryNo: "", quantity: "", notes: "" });
+      setForm({ ...form, ...blank });
+      setExtras({});
       setDone(true);
     },
   });
@@ -256,7 +257,6 @@ function DeliveryForm() {
   const setNum = (k: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [k]: digitsOnly(e.target.value) });
 
-
   return (
     <div className="frost rounded-2xl p-4 space-y-3">
       <div>
@@ -264,18 +264,11 @@ function DeliveryForm() {
         <select
           className="field"
           value={form.clientVoucherNo}
-          onChange={(e) =>
-            setForm({ ...form, clientVoucherNo: e.target.value, item: "", process: "" })
-          }
+          onChange={(e) => setForm({ ...form, clientVoucherNo: e.target.value, item: "" })}
         >
           <option value="">Select a client voucher…</option>
           {board.clientVouchers
-            .filter(
-              (v) =>
-                num(v.quantity) -
-                  deliveriesFor(board, v.voucherNo).reduce((s, d) => s + num(d.quantity), 0) >
-                0,
-            )
+            .filter((v) => num(v.quantity) - baseDelivered(board, v.voucherNo) > 0)
             .map((v) => (
               <option key={v.voucherNo} value={v.voucherNo}>
                 {v.voucherNo} · {v.clientName}
@@ -285,7 +278,7 @@ function DeliveryForm() {
       </div>
 
       {source && (
-        <div className="grid grid-cols-2 gap-3">
+        <>
           <div>
             <Label>Item</Label>
             <Select
@@ -295,31 +288,19 @@ function DeliveryForm() {
               placeholder="Select item…"
             />
           </div>
-          <div>
-            <Label>Process</Label>
-            <Select
-              value={form.process}
-              onChange={set("process")}
-              options={[...PROCESSES]}
-              placeholder="Select process…"
-            />
+          <div className="rounded-2xl bg-frostline/30 p-3 text-[12px] space-y-1">
+            <div className="flex justify-between">
+              <span className="text-inkmuted">Client</span>
+              <span className="font-semibold">{source.clientName}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-inkmuted">Sarees delivered so far</span>
+              <span className="font-semibold">
+                {delivered} of {source.quantity || "—"}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
-
-      {source && (
-        <div className="rounded-2xl bg-frostline/30 p-3 text-[12px] space-y-1">
-          <div className="flex justify-between">
-            <span className="text-inkmuted">Client</span>
-            <span className="font-semibold">{source.clientName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-inkmuted">Delivered so far</span>
-            <span className="font-semibold">
-              {delivered} of {source.quantity || "—"}
-            </span>
-          </div>
-        </div>
+        </>
       )}
 
       <div>
@@ -334,37 +315,78 @@ function DeliveryForm() {
           onChange={setNum("deliveryNo")}
         />
       </div>
+      <div>
+        <Label>Date</Label>
+        <input type="date" className="field" value={form.date} onChange={set("date")} />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Date</Label>
-          <input type="date" className="field" value={form.date} onChange={set("date")} />
-        </div>
-        <div>
-          <Label>Quantity delivered</Label>
+          <Label>Finishing qty</Label>
           <input
             className="field"
-            type="text"
             inputMode="numeric"
             pattern="[0-9]*"
             placeholder="0"
-            value={form.quantity}
-            onChange={setNum("quantity")}
+            value={form.finishing}
+            onChange={setNum("finishing")}
           />
+        </div>
+        <div>
+          <Label>Return qty (optional)</Label>
+          <input
+            className="field"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="0"
+            value={form.returned}
+            onChange={setNum("returned")}
+          />
+        </div>
+      </div>
+      {source && (
+        <p className={`text-[12px] font-semibold ${overLimit ? "text-warn" : "text-inkmuted"}`}>
+          {overLimit
+            ? `Too much — only ${remaining} sarees left (finishing + return).`
+            : `Up to ${remaining} sarees can be delivered (finishing + return).`}
+        </p>
+      )}
+
+      <div>
+        <Label>Additional work (optional)</Label>
+        <div className="space-y-2">
+          {EXTRA_PROCESSES.map((p) => {
+            const on = extras[p] !== undefined;
+            return (
+              <div key={p} className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-[13px] flex-1">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(e) => setExtras({ ...extras, [p]: e.target.checked ? "" : undefined })}
+                  />
+                  {p}
+                </label>
+                {on && (
+                  <input
+                    className="field max-w-[110px]"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="Qty"
+                    aria-label={`${p} quantity`}
+                    value={extras[p]}
+                    onChange={(e) => setExtras({ ...extras, [p]: digitsOnly(e.target.value) })}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div>
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
-      </div>
-      <div>
-        {source && (
-          <p className={`text-[12px] font-semibold ${overLimit ? "text-warn" : "text-inkmuted"}`}>
-            {overLimit
-              ? `Too much — only ${remaining} left to deliver on this voucher.`
-              : `Up to ${remaining} can be delivered.`}
-          </p>
-        )}
       </div>
 
       <button
@@ -373,8 +395,8 @@ function DeliveryForm() {
           !form.deliveryNo ||
           !form.clientVoucherNo ||
           !form.item ||
-          !form.process ||
-          !form.quantity ||
+          lines.length === 0 ||
+          extrasIncomplete ||
           overLimit
         }
         onClick={() => {
