@@ -91,28 +91,47 @@ function Reports() {
     return [...map.entries()];
   }, [lines]);
 
-  function exportCsv() {
+  function exportClientCsv(client: string, clientLines: Line[]) {
+    const header = [
+      "Date",
+      "Delivery voucher",
+      "Client voucher",
+      "Item",
+      "Process",
+      "Ordered quantity",
+      "Delivered quantity",
+    ];
+    const dataRows = clientLines.map((l) => [
+      l.date,
+      l.deliveryNo,
+      l.clientVoucherNo,
+      l.item,
+      l.process,
+      l.ordered === null ? "" : String(l.ordered),
+      String(l.quantity),
+    ]);
+    const totals = new Map<string, number>();
+    for (const l of clientLines) {
+      totals.set(l.process, (totals.get(l.process) ?? 0) + l.quantity);
+    }
+    const totalRows = [...totals.entries()].map(([process, qty]) => [
+      "",
+      "",
+      "",
+      "",
+      `Total ${process}`,
+      "",
+      String(qty),
+    ]);
+    const fullTotal = [...totals.values()].reduce((s, n) => s + n, 0);
     const rows = [
-      [
-        "Client",
-        "Date",
-        "Delivery voucher",
-        "Client voucher",
-        "Item",
-        "Process",
-        "Ordered quantity",
-        "Delivered quantity",
-      ],
-      ...lines.map((l) => [
-        l.client,
-        l.date,
-        l.deliveryNo,
-        l.clientVoucherNo,
-        l.item,
-        l.process,
-        l.ordered === null ? "" : String(l.ordered),
-        String(l.quantity),
-      ]),
+      [`Client: ${client}`],
+      [""],
+      header,
+      ...dataRows,
+      [""],
+      ...totalRows,
+      ["", "", "", "", "Full Total", "", String(fullTotal)],
     ];
     const csv = rows
       .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))
@@ -120,7 +139,7 @@ function Reports() {
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `voucherlink-${month}.csv`;
+    a.download = `voucherlink-${client.replace(/\s+/g, "-")}-${month}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -147,15 +166,23 @@ function Reports() {
       <div className="space-y-2.5">
         {byClient.map(([client, clientLines]) => (
           <article key={client} className="frost rounded-2xl p-4 shadow-[0_14px_30px_-18px_#0e224440]">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-2">
                 <span className="font-display text-[14px] font-semibold">{client}</span>
-                <span className="text-[11px] text-tealdeep font-semibold">
-                  {clientLines.filter((l) => isBaseProcess(l.process)).reduce((s, l) => s + l.quantity, 0)} of{" "}
-                  {[...new Set(clientLines.map((l) => l.clientVoucherNo.trim().toLowerCase()))].reduce(
-                    (s, v) => s + (orderedByVoucher.get(v) ?? 0),
-                    0,
-                  )}{" "}
-                  delivered
+                <span className="flex items-center gap-2">
+                  <span className="text-[11px] text-tealdeep font-semibold">
+                    {clientLines.filter((l) => isBaseProcess(l.process)).reduce((s, l) => s + l.quantity, 0)} of{" "}
+                    {[...new Set(clientLines.map((l) => l.clientVoucherNo.trim().toLowerCase()))].reduce(
+                      (s, v) => s + (orderedByVoucher.get(v) ?? 0),
+                      0,
+                    )}{" "}
+                    delivered
+                  </span>
+                  <button
+                    onClick={() => exportClientCsv(client, clientLines)}
+                    className="px-2.5 py-1 rounded-full glass text-[10px] font-semibold text-brand"
+                  >
+                    Export CSV
+                  </button>
                 </span>
               </div>
             <div className="overflow-x-auto -mx-2">
@@ -196,13 +223,6 @@ function Reports() {
           </div>
         )}
       </div>
-
-      <button
-        onClick={exportCsv}
-        className="w-full py-3 rounded-2xl bg-brand text-primary-foreground font-display font-semibold shadow-[0_10px_24px_-10px_var(--brand)]"
-      >
-        Export CSV
-      </button>
     </AppShell>
   );
 }
