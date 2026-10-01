@@ -27,7 +27,7 @@ export const Route = createFileRoute("/new")({
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(boardQuery),
   component: NewVoucher,
-  errorComponent: ({ error }: { error: Error }) => (
+  errorComponent: ({ error }: ErrorComponentProps) => (
     <AppShell title="New voucher">
       <div className="frost rounded-2xl p-4 text-[13px] text-inkmuted">{error.message}</div>
     </AppShell>
