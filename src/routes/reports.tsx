@@ -223,13 +223,6 @@ function Reports() {
           </div>
         )}
       </div>
-
-      <button
-        onClick={exportCsv}
-        className="w-full py-3 rounded-2xl bg-brand text-primary-foreground font-display font-semibold shadow-[0_10px_24px_-10px_var(--brand)]"
-      >
-        Export CSV
-      </button>
     </AppShell>
   );
 }
