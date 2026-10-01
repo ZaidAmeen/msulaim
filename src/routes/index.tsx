@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, type ErrorComponentProps } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { VoucherCard } from "@/components/VoucherCard";
@@ -29,11 +29,11 @@ export const Route = createFileRoute("/")({
   notFoundComponent: () => <AppShell title="Not found">Nothing here.</AppShell>,
 });
 
-function SheetError({ error }: { error: Error }) {
+function SheetError({ error }: ErrorComponentProps) {
   return (
     <AppShell title="Board">
       <div className="frost rounded-2xl p-4 text-[13px] text-inkmuted">
-        Couldn&apos;t load your sheet right now. {error.message}
+        Couldn&apos;t load your sheet right now. {(error as Error).message}
       </div>
     </AppShell>
   );
