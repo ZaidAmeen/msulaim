@@ -33,7 +33,7 @@ function SheetError({ error }: ErrorComponentProps) {
   return (
     <AppShell title="Board">
       <div className="frost rounded-2xl p-4 text-[13px] text-inkmuted">
-        Couldn&apos;t load your sheet right now. {error.message}
+        Couldn&apos;t load your sheet right now. {(error as Error).message}
       </div>
     </AppShell>
   );

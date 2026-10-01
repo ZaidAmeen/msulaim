@@ -27,7 +27,7 @@ export const Route = createFileRoute("/vouchers")({
   component: Vouchers,
   errorComponent: ({ error }: ErrorComponentProps) => (
     <AppShell title="Client vouchers">
-      <div className="frost rounded-2xl p-4 text-[13px] text-inkmuted">{error.message}</div>
+      <div className="frost rounded-2xl p-4 text-[13px] text-inkmuted">{(error as Error).message}</div>
     </AppShell>
   ),
   notFoundComponent: () => <AppShell title="Not found">Nothing here.</AppShell>,
