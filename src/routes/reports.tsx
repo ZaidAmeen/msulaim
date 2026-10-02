@@ -126,58 +126,91 @@ function Reports() {
     return [...map.entries()];
   }, [lines]);
 
-  function exportClientCsv(client: string, clientLines: Line[]) {
-    const header = [
-      "Date",
-      "Delivery voucher",
-      "Client voucher",
-      "Item",
-      "Process",
-      "Ordered quantity",
-      "Delivered quantity",
-    ];
-    const dataRows = clientLines.map((l) => [
-      l.date,
-      l.deliveryNo,
-      l.clientVoucherNo,
-      l.item,
-      l.process,
-      l.ordered === null ? "" : String(l.ordered),
-      String(l.quantity),
-    ]);
+  const HEADER = ["Date", "VC No.", "Item", "Process", "Quantity", "DC No.", "Delivered Quantity"];
+
+  /** Table rows; ordered quantity shown only on the first row of each client voucher. */
+  function buildRows(clientLines: Line[]): string[][] {
+    const seen = new Set<string>();
+    return clientLines.map((l) => {
+      const key = l.clientVoucherNo.trim().toLowerCase();
+      const first = !seen.has(key);
+      seen.add(key);
+      return [
+        l.date,
+        l.clientVoucherNo,
+        l.item,
+        l.process,
+        first && l.ordered !== null ? String(l.ordered) : "",
+        l.deliveryNo,
+        String(l.quantity),
+      ];
+    });
+  }
+
+  function buildTotals(clientLines: Line[]): [string, number][] {
     const totals = new Map<string, number>();
-    for (const l of clientLines) {
-      totals.set(l.process, (totals.get(l.process) ?? 0) + l.quantity);
-    }
-    const totalRows = [...totals.entries()].map(([process, qty]) => [
-      "",
-      "",
-      "",
-      "",
-      `Total ${process}`,
-      "",
-      String(qty),
-    ]);
-    const fullTotal = [...totals.values()].reduce((s, n) => s + n, 0);
+    for (const l of clientLines) totals.set(l.process, (totals.get(l.process) ?? 0) + l.quantity);
+    const list = [...totals.entries()].map(([p, q]) => [`Total ${p}`, q] as [string, number]);
+    list.push(["Full Total", [...totals.values()].reduce((s, n) => s + n, 0)]);
+    return list;
+  }
+
+  const fileBase = (client: string) =>
+    `voucherlink-${client.replace(/\s+/g, "-")}-${from || "start"}_to_${to || "today"}`;
+
+  function download(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportClientCsv(client: string, clientLines: Line[]) {
     const rows = [
       [`Client: ${client}`],
       [`Period: ${from || "start"} to ${to || "today"}`],
       [""],
-      header,
-      ...dataRows,
+      HEADER,
+      ...buildRows(clientLines),
       [""],
-      ...totalRows,
-      ["", "", "", "", "Full Total", "", String(fullTotal)],
+      ...buildTotals(clientLines).map(([label, q]) => ["", "", "", "", "", label, String(q)]),
     ];
-    const csv = rows
-      .map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `voucherlink-${client.replace(/\s+/g, "-")}-${from || "start"}_to_${to || "today"}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    download(new Blob([csv], { type: "text/csv" }), `${fileBase(client)}.csv`);
+  }
+
+  async function exportClientPdf(client: string, clientLines: Line[]) {
+    const { jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const w = doc.internal.pageSize.getWidth();
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("M Sulaim", w / 2, 50, { align: "center" });
+    doc.setFontSize(13);
+    doc.text("Delivery Statement", w / 2, 72, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Client: ${client}`, 40, 100);
+    const totals = buildTotals(clientLines);
+    autoTable(doc, {
+      startY: 112,
+      head: [HEADER],
+      body: buildRows(clientLines),
+      foot: totals.map(([label, q]) => [
+        { content: label, colSpan: 6, styles: { halign: "right" } },
+        String(q),
+      ]),
+      showFoot: "lastPage",
+      theme: "grid",
+      styles: { fontSize: 9, cellPadding: 5 },
+      headStyles: { fillColor: [46, 107, 240] },
+      footStyles: { fillColor: [240, 244, 250], textColor: 20, fontStyle: "bold" },
+      columnStyles: { 4: { halign: "right" }, 6: { halign: "right" } },
+    });
+    download(doc.output("blob"), `${fileBase(client)}.pdf`);
   }
 
   const th =
@@ -229,6 +262,12 @@ function Reports() {
                   delivered
                 </span>
                 <button
+                  onClick={() => exportClientPdf(client, clientLines)}
+                  className="px-2.5 py-1 rounded-full bg-brand text-primary-foreground text-[10px] font-semibold"
+                >
+                  Export PDF
+                </button>
+                <button
                   onClick={() => exportClientCsv(client, clientLines)}
                   className="px-2.5 py-1 rounded-full glass text-[10px] font-semibold text-brand"
                 >
@@ -240,30 +279,23 @@ function Reports() {
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-frostline/50">
-                    <th className={th}>Date</th>
-                    <th className={th}>Delivery no.</th>
-                    <th className={th}>Client voucher</th>
-                    <th className={th}>Item</th>
-                    <th className={th}>Process</th>
-                    <th className={`${th} text-right`}>Ordered</th>
-                    <th className={`${th} text-right`}>Delivered</th>
+                    {HEADER.map((h, i) => (
+                      <th key={h} className={i === 4 || i === 6 ? `${th} text-right` : th}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {clientLines.map((l, i) => (
-                    <tr
-                      key={`${l.deliveryNo}-${i}`}
-                      className="border-b border-frostline/30 last:border-0"
-                    >
-                      <td className={td}>{l.date}</td>
-                      <td className={`${td} font-mono text-brand`}>{l.deliveryNo}</td>
-                      <td className={`${td} font-mono`}>{l.clientVoucherNo}</td>
-                      <td className={td}>{l.item}</td>
-                      <td className={td}>{l.process}</td>
-                      <td className={`${td} text-right text-inkmuted`}>
-                        {l.ordered === null ? "—" : l.ordered}
-                      </td>
-                      <td className={`${td} text-right font-semibold`}>{l.quantity}</td>
+                  {buildRows(clientLines).map((r, i) => (
+                    <tr key={i} className="border-b border-frostline/30 last:border-0">
+                      <td className={td}>{r[0]}</td>
+                      <td className={`${td} font-mono`}>{r[1]}</td>
+                      <td className={td}>{r[2]}</td>
+                      <td className={td}>{r[3]}</td>
+                      <td className={`${td} text-right text-inkmuted`}>{r[4]}</td>
+                      <td className={`${td} font-mono text-brand`}>{r[5]}</td>
+                      <td className={`${td} text-right font-semibold`}>{r[6]}</td>
                     </tr>
                   ))}
                 </tbody>
