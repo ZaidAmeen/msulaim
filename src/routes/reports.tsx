@@ -10,12 +10,12 @@ import { num } from "@/lib/voucher-utils";
 export const Route = createFileRoute("/reports")({
   head: () => ({
     meta: [
-      { title: "Client statement — VoucherLink" },
+      { title: "Client statement — M Sulaim" },
       {
         name: "description",
         content: "Delivery statement per client for any date range, exportable as CSV.",
       },
-      { property: "og:title", content: "Client statement — VoucherLink" },
+      { property: "og:title", content: "Client statement — M Sulaim" },
       {
         property: "og:description",
         content: "Delivered items per client between any two dates, exportable as CSV.",
@@ -160,7 +160,7 @@ function Reports() {
   }
 
   const fileBase = (client: string) =>
-    `voucherlink-${client.replace(/\s+/g, "-")}-${from || "start"}_to_${to || "today"}`;
+    `msulaim-${client.replace(/\s+/g, "-")}-${from || "start"}_to_${to || "today"}`;
 
   function download(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob);

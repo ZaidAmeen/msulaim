@@ -8,12 +8,12 @@ import { boardQuery } from "@/lib/voucher-queries";
 export const Route = createFileRoute("/deliveries")({
   head: () => ({
     meta: [
-      { title: "Delivery vouchers — VoucherLink" },
+      { title: "Delivery vouchers — M Sulaim" },
       {
         name: "description",
         content: "Every delivery voucher you issued, with the client voucher it belongs to.",
       },
-      { property: "og:title", content: "Delivery vouchers — VoucherLink" },
+      { property: "og:title", content: "Delivery vouchers — M Sulaim" },
       {
         property: "og:description",
         content: "Delivery vouchers issued, each linked to its client voucher.",

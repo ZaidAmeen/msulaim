@@ -9,12 +9,12 @@ import { statusOf, type Status } from "@/lib/voucher-utils";
 export const Route = createFileRoute("/vouchers")({
   head: () => ({
     meta: [
-      { title: "Client vouchers — VoucherLink" },
+      { title: "Client vouchers — M Sulaim" },
       {
         name: "description",
         content: "Search every client voucher and see which delivery vouchers are linked to it.",
       },
-      { property: "og:title", content: "Client vouchers — VoucherLink" },
+      { property: "og:title", content: "Client vouchers — M Sulaim" },
       {
         property: "og:description",
         content: "Search client vouchers and their linked delivery vouchers.",

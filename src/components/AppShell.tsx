@@ -40,12 +40,12 @@ export function AppShell({
         <header className="glass sticky top-0 z-20 border-b border-white/40">
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="size-8 rounded-[10px] bg-brand grid place-items-center text-[15px] font-display font-bold text-primary-foreground shadow-[0_6px_16px_-6px_var(--brand)]">
-                V
+              <div className="size-8 rounded-[10px] bg-brand grid place-items-center text-[11px] font-display font-bold text-primary-foreground shadow-[0_6px_16px_-6px_var(--brand)]">
+                MS
               </div>
               <div className="leading-tight">
                 <div className="font-display text-[15px] font-semibold tracking-tight">
-                  VoucherLink
+                  M Sulaim
                 </div>
                 <div className="text-[10px] text-inkmuted -mt-0.5">{subtitle ?? "Google Sheets"}</div>
               </div>
