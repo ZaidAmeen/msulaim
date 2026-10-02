@@ -114,6 +114,7 @@ function Reports() {
           (a, b) =>
             a.client.localeCompare(b.client) ||
             voucherCompare(a.clientVoucherNo, b.clientVoucherNo) ||
+            processRank(a.process) - processRank(b.process) ||
             dateKey(a.date).localeCompare(dateKey(b.date)) ||
             voucherCompare(a.deliveryNo, b.deliveryNo),
         ),
@@ -136,7 +137,7 @@ function Reports() {
       const first = !seen.has(key);
       seen.add(key);
       return [
-        l.date,
+        fmtDate(l.date),
         l.clientVoucherNo,
         l.item,
         l.process,
@@ -147,12 +148,14 @@ function Reports() {
     });
   }
 
-  function buildTotals(clientLines: Line[]): [string, number][] {
+  /** Per-process subtotals (Finishing first, Return last) and grand total. */
+  function buildTotals(clientLines: Line[]): { subtotals: [string, number][]; grand: number } {
     const totals = new Map<string, number>();
     for (const l of clientLines) totals.set(l.process, (totals.get(l.process) ?? 0) + l.quantity);
-    const list = [...totals.entries()].map(([p, q]) => [`Total ${p}`, q] as [string, number]);
-    list.push(["Full Total", [...totals.values()].reduce((s, n) => s + n, 0)]);
-    return list;
+    const subtotals = [...totals.entries()].sort(
+      (a, b) => processRank(a[0]) - processRank(b[0]),
+    );
+    return { subtotals, grand: subtotals.reduce((s, [, n]) => s + n, 0) };
   }
 
   const fileBase = (client: string) =>
@@ -168,14 +171,17 @@ function Reports() {
   }
 
   function exportClientCsv(client: string, clientLines: Line[]) {
+    const { subtotals, grand } = buildTotals(clientLines);
     const rows = [
       [`Client: ${client}`],
-      [`Period: ${from || "start"} to ${to || "today"}`],
+      [`Period: ${from ? fmtDate(from) : "start"} to ${to ? fmtDate(to) : "today"}`],
       [""],
       HEADER,
       ...buildRows(clientLines),
       [""],
-      ...buildTotals(clientLines).map(([label, q]) => ["", "", "", "", "", label, String(q)]),
+      ["", "", "", "", "", "Subtotal", ""],
+      ...subtotals.map(([p, q]) => ["", "", "", "", "", p, String(q)]),
+      ["", "", "", "", "", "Grand Total", String(grand)],
     ];
     const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
     download(new Blob([csv], { type: "text/csv" }), `${fileBase(client)}.csv`);
@@ -194,21 +200,44 @@ function Reports() {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.text(`Client: ${client}`, 40, 100);
-    const totals = buildTotals(clientLines);
+    const { subtotals, grand } = buildTotals(clientLines);
+    const plain = { fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0 };
     autoTable(doc, {
       startY: 112,
       head: [HEADER],
       body: buildRows(clientLines),
-      foot: totals.map(([label, q]) => [
-        { content: label, colSpan: 6, styles: { halign: "right" } },
-        String(q),
-      ]),
-      showFoot: "lastPage",
       theme: "grid",
-      styles: { fontSize: 9, cellPadding: 5 },
-      headStyles: { fillColor: [46, 107, 240] },
-      footStyles: { fillColor: [240, 244, 250], textColor: 20, fontStyle: "bold" },
-      columnStyles: { 4: { halign: "right" }, 6: { halign: "right" } },
+      styles: { fontSize: 9, cellPadding: 5, halign: "center", valign: "middle" },
+      headStyles: { fillColor: [46, 107, 240], halign: "center", valign: "middle" },
+    });
+    const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16;
+    autoTable(doc, {
+      startY: y,
+      margin: { left: w - 40 - 220 },
+      tableWidth: 220,
+      theme: "plain",
+      styles: { fontSize: 10, cellPadding: 4, halign: "center", valign: "middle", textColor: 20 },
+      body: [
+        [{ content: "Subtotal", colSpan: 2, styles: { fontStyle: "bold", halign: "left", ...plain } }],
+        ...subtotals.map(([p, q]) => [
+          { content: p, styles: { halign: "left" as const } },
+          String(q),
+        ]),
+        [
+          { content: "Grand Total", styles: { fontStyle: "bold", halign: "left" } },
+          { content: String(grand), styles: { fontStyle: "bold" } },
+        ],
+      ],
+      didDrawCell: (data) => {
+        if (data.section === "body" && data.row.index === subtotals.length + 1) {
+          const { x, y: cy, width, height } = data.cell;
+          doc.setDrawColor(20);
+          doc.setLineWidth(0.8);
+          doc.line(x, cy, x + width, cy);
+          doc.line(x, cy + height, x + width, cy + height);
+          doc.line(x, cy + height + 2.5, x + width, cy + height + 2.5);
+        }
+      },
     });
     download(doc.output("blob"), `${fileBase(client)}.pdf`);
   }
