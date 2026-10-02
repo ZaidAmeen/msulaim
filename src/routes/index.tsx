@@ -8,13 +8,13 @@ import { statusOf } from "@/lib/voucher-utils";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "VoucherLink — Client & delivery voucher board" },
+      { title: "M Sulaim — Client & delivery voucher board" },
       {
         name: "description",
         content:
           "Track client vouchers and the delivery vouchers issued against them, live from Google Sheets.",
       },
-      { property: "og:title", content: "VoucherLink — Client & delivery voucher board" },
+      { property: "og:title", content: "M Sulaim — Client & delivery voucher board" },
       {
         property: "og:description",
         content: "Daily board of client vouchers and their linked delivery vouchers.",

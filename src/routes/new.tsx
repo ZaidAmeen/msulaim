@@ -11,12 +11,12 @@ import { CLIENTS, EXTRA_PROCESSES, ITEMS, withExisting } from "@/lib/options";
 export const Route = createFileRoute("/new")({
   head: () => ({
     meta: [
-      { title: "New voucher — VoucherLink" },
+      { title: "New voucher — M Sulaim" },
       {
         name: "description",
         content: "Record a client voucher or issue a delivery voucher linked to it.",
       },
-      { property: "og:title", content: "New voucher — VoucherLink" },
+      { property: "og:title", content: "New voucher — M Sulaim" },
       {
         property: "og:description",
         content: "Record a client voucher or issue a linked delivery voucher.",
