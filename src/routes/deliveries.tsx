@@ -1,4 +1,5 @@
 import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-router";
+import { fmtDate } from "@/lib/date-format";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
@@ -70,7 +71,7 @@ function Deliveries() {
               <span className="px-2 py-0.5 rounded-md bg-frostline/60 text-branddeep font-mono">
                 {d.clientVoucherNo}
               </span>
-              <span className="ml-auto text-[11px] text-inkmuted font-normal">{d.date}</span>
+              <span className="ml-auto text-[11px] text-inkmuted font-normal">{fmtDate(d.date)}</span>
             </div>
             <div className="h-px bg-frostline/40 my-3" />
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px]">
