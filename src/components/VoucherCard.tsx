@@ -1,4 +1,5 @@
 import type { Board, ClientVoucher } from "@/lib/vouchers.functions";
+import { fmtDate } from "@/lib/date-format";
 import { deliveriesFor, statusOf } from "@/lib/voucher-utils";
 
 const styles = {
@@ -21,7 +22,7 @@ export function VoucherCard({ board, voucher }: { board: Board; voucher: ClientV
           <span className={`size-1.5 rounded-full ${s.dot}`} />
           {s.label}
         </span>
-        <span className="text-[11px] text-inkmuted">{voucher.date}</span>
+        <span className="text-[11px] text-inkmuted">{fmtDate(voucher.date)}</span>
       </div>
 
       <div className="flex items-center gap-2 text-[13px] font-semibold">
