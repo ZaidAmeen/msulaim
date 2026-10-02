@@ -3,7 +3,7 @@ export function fmtDate(value: string): string {
   const s = String(value ?? "").trim();
   if (!s) return "";
   const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (iso) return `${iso[3].padStart(2, "0")}/${iso[2].padStart(2, "0")}/${iso[1]}`;
+  if (iso) return `${(iso[3] ?? "").padStart(2, "0")}/${(iso[2] ?? "").padStart(2, "0")}/${iso[1]}`;
   const d = new Date(s);
   if (Number.isNaN(d.getTime())) return s;
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
