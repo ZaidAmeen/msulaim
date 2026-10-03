@@ -84,7 +84,10 @@ function Reports() {
   const voucherInfo = useMemo(() => {
     const map = new Map<string, { date: string; ordered: number }>();
     for (const v of board.clientVouchers) {
-      map.set(v.voucherNo.trim().toLowerCase(), { date: v.date, ordered: num(v.quantity) });
+      const vk = v.voucherNo.trim().toLowerCase();
+      map.set(vk, { date: v.date, ordered: num(v.quantity) });
+      for (const i of v.items)
+        map.set(`${vk}|${i.item.trim().toLowerCase()}`, { date: v.date, ordered: num(i.quantity) });
     }
     return map;
   }, [board]);
@@ -93,7 +96,9 @@ function Reports() {
     () =>
       board.deliveryVouchers
         .map((d) => {
-          const info = voucherInfo.get(d.clientVoucherNo.trim().toLowerCase());
+          const vk = d.clientVoucherNo.trim().toLowerCase();
+          const info =
+            voucherInfo.get(`${vk}|${d.item.trim().toLowerCase()}`) ?? voucherInfo.get(vk);
           return {
             // Date shown/filtered is the client voucher's date.
             date: info?.date || d.date,
@@ -115,6 +120,7 @@ function Reports() {
           (a, b) =>
             a.client.localeCompare(b.client) ||
             voucherCompare(a.clientVoucherNo, b.clientVoucherNo) ||
+            a.item.localeCompare(b.item) ||
             processRank(a.process) - processRank(b.process) ||
             dateKey(a.date).localeCompare(dateKey(b.date)) ||
             voucherCompare(a.deliveryNo, b.deliveryNo),
@@ -134,7 +140,7 @@ function Reports() {
   function buildRows(clientLines: Line[]): string[][] {
     const seen = new Set<string>();
     return clientLines.map((l) => {
-      const key = l.clientVoucherNo.trim().toLowerCase();
+      const key = `${l.clientVoucherNo.trim().toLowerCase()}|${l.item.trim().toLowerCase()}`;
       const first = !seen.has(key);
       seen.add(key);
       return [

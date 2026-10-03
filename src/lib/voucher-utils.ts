@@ -44,3 +44,25 @@ export function baseDelivered(board: Board, voucherNo: string): number {
     .filter((d) => isBaseProcess(d.process))
     .reduce((s, d) => s + num(d.quantity), 0);
 }
+
+/** Physical sarees delivered for one item of a voucher. */
+export function itemDelivered(board: Board, v: ClientVoucher, item: string): number {
+  const ik = item.trim().toLowerCase();
+  const single = v.items.length === 1;
+  return deliveriesFor(board, v.voucherNo)
+    .filter((d) => isBaseProcess(d.process))
+    .filter((d) => {
+      const di = d.item.trim().toLowerCase();
+      return di === ik || (single && di === "");
+    })
+    .reduce((s, d) => s + num(d.quantity), 0);
+}
+
+/** Items on a voucher with ordered / delivered / remaining counts. */
+export function itemStatus(board: Board, v: ClientVoucher) {
+  return v.items.map((i) => {
+    const ordered = num(i.quantity);
+    const delivered = itemDelivered(board, v, i.item);
+    return { item: i.item, ordered, delivered, remaining: Math.max(0, ordered - delivered) };
+  });
+}
