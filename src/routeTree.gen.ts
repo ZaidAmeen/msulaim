@@ -11,7 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DeliveriesRouteImport } from './routes/deliveries'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NewRouteImport } from './routes/new'
+import { Route as OutsourcingRouteImport } from './routes/outsourcing'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as VouchersRouteImport } from './routes/vouchers'
 
@@ -25,9 +27,19 @@ const DeliveriesRoute = DeliveriesRouteImport.update({
   path: '/deliveries',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NewRoute = NewRouteImport.update({
   id: '/new',
   path: '/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OutsourcingRoute = OutsourcingRouteImport.update({
+  id: '/outsourcing',
+  path: '/outsourcing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -44,14 +56,18 @@ const VouchersRoute = VouchersRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deliveries': typeof DeliveriesRoute
+  '/history': typeof HistoryRoute
   '/new': typeof NewRoute
+  '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
   '/vouchers': typeof VouchersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deliveries': typeof DeliveriesRoute
+  '/history': typeof HistoryRoute
   '/new': typeof NewRoute
+  '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
   '/vouchers': typeof VouchersRoute
 }
@@ -59,22 +75,48 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/deliveries': typeof DeliveriesRoute
+  '/history': typeof HistoryRoute
   '/new': typeof NewRoute
+  '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
   '/vouchers': typeof VouchersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deliveries' | '/new' | '/reports' | '/vouchers'
+  fullPaths:
+    | '/'
+    | '/deliveries'
+    | '/history'
+    | '/new'
+    | '/outsourcing'
+    | '/reports'
+    | '/vouchers'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deliveries' | '/new' | '/reports' | '/vouchers'
-  id: '__root__' | '/' | '/deliveries' | '/new' | '/reports' | '/vouchers'
+  to:
+    | '/'
+    | '/deliveries'
+    | '/history'
+    | '/new'
+    | '/outsourcing'
+    | '/reports'
+    | '/vouchers'
+  id:
+    | '__root__'
+    | '/'
+    | '/deliveries'
+    | '/history'
+    | '/new'
+    | '/outsourcing'
+    | '/reports'
+    | '/vouchers'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeliveriesRoute: typeof DeliveriesRoute
+  HistoryRoute: typeof HistoryRoute
   NewRoute: typeof NewRoute
+  OutsourcingRoute: typeof OutsourcingRoute
   ReportsRoute: typeof ReportsRoute
   VouchersRoute: typeof VouchersRoute
 }
@@ -95,11 +137,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeliveriesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/new': {
       id: '/new'
       path: '/new'
       fullPath: '/new'
       preLoaderRoute: typeof NewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/outsourcing': {
+      id: '/outsourcing'
+      path: '/outsourcing'
+      fullPath: '/outsourcing'
+      preLoaderRoute: typeof OutsourcingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -122,7 +178,9 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeliveriesRoute: DeliveriesRoute,
+  HistoryRoute: HistoryRoute,
   NewRoute: NewRoute,
+  OutsourcingRoute: OutsourcingRoute,
   ReportsRoute: ReportsRoute,
   VouchersRoute: VouchersRoute,
 }
