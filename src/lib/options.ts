@@ -28,3 +28,6 @@ export function isBaseProcess(p: string): boolean {
   const t = p.trim().toLowerCase();
   return t === "" || t === "finishing" || t === "return";
 }
+
+/** Preset processes for outsourced work; more can be added from the form. */
+export const OUTSOURCE_PROCESSES = ["Finishing", "Folding", "Blouse Stitch", "Piping"] as const;

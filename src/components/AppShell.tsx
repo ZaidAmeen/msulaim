@@ -15,7 +15,7 @@ function NavItem({
   return (
     <Link
       to={to}
-      className={`flex flex-col items-center gap-1 px-3 py-1.5 ${
+      className={`flex flex-col items-center gap-1 px-1.5 py-1.5 ${
         active ? "text-brand" : "text-inkmuted"
       }`}
     >
@@ -50,9 +50,13 @@ export function AppShell({
                 <div className="text-[10px] text-inkmuted -mt-0.5">{subtitle ?? "Google Sheets"}</div>
               </div>
             </div>
-            <div className="size-9 rounded-full glass grid place-items-center text-[13px] font-semibold">
-              ZA
-            </div>
+            <Link
+              to="/history"
+              aria-label="Statement history"
+              className="h-9 px-3 rounded-full glass grid place-items-center text-[11px] font-semibold text-brand"
+            >
+              History
+            </Link>
           </div>
         </header>
 
@@ -75,6 +79,7 @@ export function AppShell({
             </Link>
             <NavItem to="/reports" label="Reports" glyph="▤" />
             <NavItem to="/deliveries" label="Delivery" glyph="●" />
+            <NavItem to="/outsourcing" label="Outsource" glyph="⇄" />
           </div>
         </div>
       </div>
