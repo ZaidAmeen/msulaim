@@ -6,6 +6,9 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
 import { num } from "@/lib/voucher-utils";
+import { deliveryKey } from "@/lib/vouchers.functions";
+import type { Statement } from "@/lib/statement";
+import { StatementPreview } from "@/components/StatementPreview";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({
@@ -43,6 +46,7 @@ type Line = {
   process: string;
   ordered: number | null;
   quantity: number;
+  key: string;
 };
 
 /** Normalise a sheet date string to YYYY-MM-DD for comparison/sorting. */
@@ -80,6 +84,7 @@ function Reports() {
 
   const [from, setFrom] = useState(firstOfMonthKey);
   const [to, setTo] = useState(todayKey);
+  const [preview, setPreview] = useState<Statement | null>(null);
 
   const voucherInfo = useMemo(() => {
     const map = new Map<string, { date: string; ordered: number }>();
@@ -95,6 +100,7 @@ function Reports() {
   const lines = useMemo<Line[]>(
     () =>
       board.deliveryVouchers
+        .filter((d) => !d.archived)
         .map((d) => {
           const vk = d.clientVoucherNo.trim().toLowerCase();
           const info =
@@ -109,6 +115,7 @@ function Reports() {
             process: d.process || "—",
             ordered: info?.ordered ?? null,
             quantity: num(d.quantity),
+            key: deliveryKey(d),
           };
         })
         .filter((l) => {
@@ -165,88 +172,21 @@ function Reports() {
     return { subtotals, grand: subtotals.reduce((s, [, n]) => s + n, 0) };
   }
 
-  const fileBase = (client: string) =>
-    `msulaim-${client.replace(/\s+/g, "-")}-${from || "start"}_to_${to || "today"}`;
-
-  function download(blob: Blob, name: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function exportClientCsv(client: string, clientLines: Line[]) {
+  function toStatement(client: string, clientLines: Line[]): Statement {
     const { subtotals, grand } = buildTotals(clientLines);
-    const rows = [
-      [`Client: ${client}`],
-      [`Period: ${from ? fmtDate(from) : "start"} to ${to ? fmtDate(to) : "today"}`],
-      [""],
-      HEADER,
-      ...buildRows(clientLines),
-      [""],
-      ["", "", "", "", "", "Subtotal", ""],
-      ...subtotals.map(([p, q]) => ["", "", "", "", "", p, String(q)]),
-      ["", "", "", "", "", "Grand Total", String(grand)],
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
-    download(new Blob([csv], { type: "text/csv" }), `${fileBase(client)}.csv`);
-  }
-
-  async function exportClientPdf(client: string, clientLines: Line[]) {
-    const { jsPDF } = await import("jspdf");
-    const { default: autoTable } = await import("jspdf-autotable");
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const w = doc.internal.pageSize.getWidth();
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.text("M Sulaim", w / 2, 50, { align: "center" });
-    doc.setFontSize(13);
-    doc.text("Delivery Statement", w / 2, 72, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Client: ${client}`, 40, 100);
-    const { subtotals, grand } = buildTotals(clientLines);
-    const plain = { fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0 };
-    autoTable(doc, {
-      startY: 112,
-      head: [HEADER],
-      body: buildRows(clientLines),
-      theme: "grid",
-      styles: { fontSize: 9, cellPadding: 5, halign: "center", valign: "middle" },
-      headStyles: { fillColor: [46, 107, 240], halign: "center", valign: "middle" },
-    });
-    const y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 16;
-    autoTable(doc, {
-      startY: y,
-      margin: { left: w - 40 - 220 },
-      tableWidth: 220,
-      theme: "plain",
-      styles: { fontSize: 10, cellPadding: 4, halign: "center", valign: "middle", textColor: 20 },
-      body: [
-        [{ content: "Subtotal", colSpan: 2, styles: { fontStyle: "bold", halign: "left", ...plain } }],
-        ...subtotals.map(([p, q]) => [
-          { content: p, styles: { halign: "left" as const } },
-          String(q),
-        ]),
-        [
-          { content: "Grand Total", styles: { fontStyle: "bold", halign: "left" } },
-          { content: String(grand), styles: { fontStyle: "bold" } },
-        ],
-      ],
-      didDrawCell: (data) => {
-        if (data.section === "body" && data.row.index === subtotals.length + 1) {
-          const { x, y: cy, width, height } = data.cell;
-          doc.setDrawColor(20);
-          doc.setLineWidth(0.8);
-          doc.line(x, cy, x + width, cy);
-          doc.line(x, cy + height, x + width, cy + height);
-          doc.line(x, cy + height + 2.5, x + width, cy + height + 2.5);
-        }
-      },
-    });
-    download(doc.output("blob"), `${fileBase(client)}.pdf`);
+    return {
+      kind: "client",
+      name: client,
+      from,
+      to,
+      title: "Delivery Statement",
+      header: HEADER,
+      rows: buildRows(clientLines),
+      numericCols: [4, 6],
+      subtotals,
+      grand,
+      keys: clientLines.map((l) => l.key),
+    };
   }
 
   const th =
@@ -298,16 +238,10 @@ function Reports() {
                   delivered
                 </span>
                 <button
-                  onClick={() => exportClientPdf(client, clientLines)}
+                  onClick={() => setPreview(toStatement(client, clientLines))}
                   className="px-2.5 py-1 rounded-full bg-brand text-primary-foreground text-[10px] font-semibold"
                 >
-                  Export PDF
-                </button>
-                <button
-                  onClick={() => exportClientCsv(client, clientLines)}
-                  className="px-2.5 py-1 rounded-full glass text-[10px] font-semibold text-brand"
-                >
-                  Export CSV
+                  Preview
                 </button>
               </span>
             </div>
@@ -345,6 +279,7 @@ function Reports() {
           </div>
         )}
       </div>
+      <StatementPreview statement={preview} onClose={() => setPreview(null)} />
     </AppShell>
   );
 }
