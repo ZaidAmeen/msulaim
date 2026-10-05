@@ -2,7 +2,8 @@ import { createFileRoute, type ErrorComponentProps } from "@tanstack/react-route
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
-import { fmtDate } from "@/lib/date-format";
+import { useState } from "react";
+import { HistoryList } from "@/components/HistoryList";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -24,35 +25,32 @@ export const Route = createFileRoute("/history")({
   ),
 });
 
+const tabs = [
+  { key: "all", label: "All" },
+  { key: "Client", label: "Client Statements" },
+  { key: "Partner", label: "Partner Reports" },
+] as const;
+
 function History() {
   const { data: board } = useSuspenseQuery(boardQuery);
+  const [tab, setTab] = useState<(typeof tabs)[number]["key"]>("all");
+  const items = tab === "all" ? board.history : board.history.filter((h) => h.type === tab);
   return (
     <AppShell title="History" subtitle="Finalized statements">
-      <div className="space-y-2.5">
-        {board.history.map((h) => (
-          <article key={h.id} className="frost rounded-2xl p-4 flex items-center justify-between gap-2">
-            <div className="text-[12px]">
-              <div className="font-display text-[14px] font-semibold">{h.name}</div>
-              <div className="text-inkmuted">
-                {h.type} · {h.from ? fmtDate(h.from) : "start"} to {h.to ? fmtDate(h.to) : "today"} · total {h.total}
-              </div>
-            </div>
-            <a
-              href={h.driveUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-1.5 rounded-full bg-brand text-primary-foreground text-[11px] font-semibold whitespace-nowrap"
-            >
-              Open in Drive
-            </a>
-          </article>
+      <div className="flex gap-2 flex-wrap">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold ${
+              tab === t.key ? "bg-brand text-primary-foreground" : "glass text-inkmuted"
+            }`}
+          >
+            {t.label}
+          </button>
         ))}
-        {board.history.length === 0 && (
-          <div className="frost rounded-2xl p-5 text-center text-[13px] text-inkmuted">
-            No finalized statements yet.
-          </div>
-        )}
       </div>
+      <HistoryList items={items} empty="No finalized statements yet." />
     </AppShell>
   );
 }
