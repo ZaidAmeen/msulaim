@@ -30,7 +30,7 @@ export function DashboardCharts({ board }: { board: Board }) {
   const daily = new Map(days.map((d) => [d, 0]));
   const clients = new Map<string, number>();
   const processes = new Map<string, number>();
-  for (const d of board.deliveryVouchers) {
+  for (const d of board.deliveryVouchers.filter((x) => !x.archived)) {
     const q = num(d.quantity);
     if (isBaseProcess(d.process)) {
       const k = dayKey(d.date);
