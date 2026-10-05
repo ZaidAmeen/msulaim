@@ -66,3 +66,14 @@ export function itemStatus(board: Board, v: ClientVoucher) {
     return { item: i.item, ordered, delivered, remaining: Math.max(0, ordered - delivered) };
   });
 }
+
+/** Fully delivered and every linked delivery already finalized — hidden from daily views. */
+export function isClosed(board: Board, v: ClientVoucher): boolean {
+  const linked = deliveriesFor(board, v.voucherNo);
+  if (!linked.length || !linked.every((d) => d.archived)) return false;
+  return itemStatus(board, v).every((i) => i.remaining === 0);
+}
+
+export function openVouchers(board: Board): ClientVoucher[] {
+  return board.clientVouchers.filter((v) => !isClosed(board, v));
+}

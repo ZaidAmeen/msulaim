@@ -3,7 +3,9 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/AppShell";
 import { VoucherCard } from "@/components/VoucherCard";
 import { boardQuery } from "@/lib/voucher-queries";
-import { statusOf } from "@/lib/voucher-utils";
+import { num, openVouchers, statusOf } from "@/lib/voucher-utils";
+import { DashboardCharts } from "@/components/DashboardCharts";
+import { isBaseProcess } from "@/lib/options";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,9 +43,15 @@ function SheetError({ error }: ErrorComponentProps) {
 
 function Board() {
   const { data: board } = useSuspenseQuery(boardQuery);
-  const received = board.clientVouchers.length;
-  const issued = board.deliveryVouchers.length;
-  const pending = board.clientVouchers.filter((v) => statusOf(board, v) === "pending").length;
+  const open = openVouchers(board);
+  const received = open.length;
+  const issued = board.deliveryVouchers.filter((d) => !d.archived).length;
+  const pending = open.filter((v) => statusOf(board, v) === "pending").length;
+  const month = new Date().toISOString().slice(0, 7);
+  const monthDelivered = board.deliveryVouchers
+    .filter((d) => isBaseProcess(d.process) && !Number.isNaN(new Date(d.date).getTime()) && new Date(d.date).toISOString().slice(0, 7) === month)
+    .reduce((s, d) => s + num(d.quantity), 0);
+  const outsourced = board.outsourcing.reduce((s, o) => s + num(o.quantity), 0);
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -55,10 +63,14 @@ function Board() {
       <div className="-mt-2 text-[11px] text-inkmuted font-medium">{today}</div>
 
       <div className="grid grid-cols-3 gap-2.5">
-        <Stat label="Received" value={received} note="client vouchers" tone="text-branddeep" />
+        <Stat label="Open" value={received} note="client vouchers" tone="text-branddeep" />
         <Stat label="Issued" value={issued} note="delivery vouchers" tone="text-tealdeep" />
         <Stat label="Pending" value={pending} note="needs link" tone="text-warn" />
+        <Stat label="This month" value={monthDelivered} note="sarees delivered" tone="text-branddeep" />
+        <Stat label="Outsourced" value={outsourced} note="open pieces" tone="text-tealdeep" />
       </div>
+
+      <DashboardCharts board={board} />
 
       <section>
         <div className="flex items-center justify-between mb-3">
@@ -71,7 +83,7 @@ function Board() {
         </div>
 
         <div className="space-y-2.5">
-          {board.clientVouchers.slice(0, 6).map((v) => (
+          {open.slice(0, 6).map((v) => (
             <VoucherCard key={v.voucherNo} board={board} voucher={v} />
           ))}
           {received === 0 && (

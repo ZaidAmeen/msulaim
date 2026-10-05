@@ -36,7 +36,8 @@ function Deliveries() {
   const { data: board } = useSuspenseQuery(boardQuery);
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
-  const rows = board.deliveryVouchers.filter((d) =>
+  const active = board.deliveryVouchers.filter((d) => !d.archived);
+  const rows = active.filter((d) =>
     needle
       ? [d.deliveryNo, d.clientVoucherNo, d.clientName, d.item, d.date]
           .join(" ")
@@ -46,7 +47,7 @@ function Deliveries() {
   );
 
   return (
-    <AppShell title="Delivery vouchers" subtitle={`${board.deliveryVouchers.length} issued`}>
+    <AppShell title="Delivery vouchers" subtitle={`${active.length} active`}>
       <div className="flex items-center gap-2 px-3.5 h-11 rounded-2xl frost shadow-[0_10px_24px_-14px_#0e224433]">
         <span className="text-inkmuted text-[13px]">●</span>
         <input

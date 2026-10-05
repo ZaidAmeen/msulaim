@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { StatementPreview } from "@/components/StatementPreview";
+import { HistoryList } from "@/components/HistoryList";
 import { boardQuery } from "@/lib/voucher-queries";
 import { addOutsourcing, outsourceKey } from "@/lib/vouchers.functions";
 import { CLIENTS, OUTSOURCE_PROCESSES, withExisting } from "@/lib/options";
@@ -145,6 +146,10 @@ function Outsourcing() {
         ))}
         {byPartner.length === 0 && <div className="frost rounded-2xl p-5 text-center text-[13px] text-inkmuted">No outsourced work in this date range.</div>}
       </div>
+      <section>
+        <h2 className="font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-inkmuted mb-3">Past partner reports</h2>
+        <HistoryList items={board.history.filter((h) => h.type === "Partner")} empty="No partner reports finalized yet." />
+      </section>
       <StatementPreview statement={preview} onClose={() => setPreview(null)} />
     </AppShell>
   );

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { VoucherCard } from "@/components/VoucherCard";
 import { boardQuery } from "@/lib/voucher-queries";
-import { statusOf, type Status } from "@/lib/voucher-utils";
+import { openVouchers, statusOf, type Status } from "@/lib/voucher-utils";
 
 export const Route = createFileRoute("/vouchers")({
   head: () => ({
@@ -47,7 +47,7 @@ function Vouchers() {
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return board.clientVouchers.filter((v) => {
+    return openVouchers(board).filter((v) => {
       if (filter !== "all" && statusOf(board, v) !== filter) return false;
       if (!needle) return true;
       return [v.voucherNo, v.clientName, v.item, v.process, v.date]
@@ -58,7 +58,7 @@ function Vouchers() {
   }, [board, q, filter]);
 
   return (
-    <AppShell title="Client vouchers" subtitle={`${board.clientVouchers.length} received`}>
+    <AppShell title="Client vouchers" subtitle={`${openVouchers(board).length} open`}>
       <div className="flex items-center gap-2 px-3.5 h-11 rounded-2xl frost shadow-[0_10px_24px_-14px_#0e224433]">
         <span className="text-inkmuted text-[13px]">●</span>
         <input
