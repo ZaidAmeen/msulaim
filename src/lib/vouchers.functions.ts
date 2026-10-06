@@ -37,6 +37,18 @@ export type OutsourceEntry = {
   createdAt: string;
 };
 
+export type TransportEntry = {
+  date: string;
+  partner: string;
+  client: string;
+  direction: string;
+  boxes: string;
+  bags: string;
+  covers: string;
+  notes: string;
+  createdAt: string;
+};
+
 export type StatementRecord = {
   id: string;
   type: string;
@@ -54,20 +66,22 @@ export type Board = {
   /** Active and archived deliveries; archived ones still count toward balances. */
   deliveryVouchers: DeliveryVoucher[];
   outsourcing: OutsourceEntry[];
+  transport: TransportEntry[];
   history: StatementRecord[];
-  options: { partners: string[]; processes: string[] };
+  options: { partners: string[]; processes: string[]; transporters: string[] };
 };
 
 export const getBoard = createServerFn({ method: "GET" }).handler(async (): Promise<Board> => {
   const S = await import("./sheets.server");
   const { readRange, readSheet, CLIENT_SHEET, DELIVERY_SHEET } = S;
-  const [cRows, dRows, aRows, oRows, hRows, optRows] = await Promise.all([
+  const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await Promise.all([
     readRange(`${CLIENT_SHEET}!A2:H`),
     readRange(`${DELIVERY_SHEET}!A2:I`),
     readSheet(S.ARCHIVED_DELIVERY_SHEET, "K"),
     readSheet(S.OUTSOURCE_SHEET, "F"),
     readSheet(S.HISTORY_SHEET, "J"),
     readSheet(S.OPTIONS_SHEET, "B"),
+    readSheet(S.TRANSPORT_SHEET, "I"),
   ]);
   const at = (r: string[], i: number) => r[i] ?? "";
   return {
@@ -133,7 +147,22 @@ export const getBoard = createServerFn({ method: "GET" }).handler(async (): Prom
     options: {
       partners: optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1)),
       processes: optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1)),
+      transporters: optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1)),
     },
+    transport: tRows
+      .filter((r) => at(r, 1) !== "")
+      .map((r) => ({
+        date: at(r, 0),
+        partner: at(r, 1),
+        client: at(r, 2),
+        direction: at(r, 3),
+        boxes: at(r, 4),
+        bags: at(r, 5),
+        covers: at(r, 6),
+        notes: at(r, 7),
+        createdAt: at(r, 8),
+      }))
+      .reverse(),
     deliveryVouchers: [
       ...aRows.filter((r) => at(r, 0) !== "").map((r) => [...r.slice(0, 9), "archived"]),
       ...dRows.filter((r) => at(r, 0) !== ""),
@@ -292,8 +321,38 @@ export const addOutsourcing = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const count = z.string().regex(/^[0-9]*$/).default("");
+const transportSchema = z.object({
+  date: z.string().min(1),
+  partner: z.string().trim().min(1).max(100),
+  client: z.string().trim().min(1).max(100),
+  direction: z.enum(["Inwards", "Outwards"]),
+  boxes: count,
+  bags: count,
+  covers: count,
+  notes: z.string().max(500).default(""),
+  newPartner: z.boolean().default(false),
+});
+
+export const addTransport = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => transportSchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const total = [data.boxes, data.bags, data.covers].reduce((s, v) => s + Number(v || 0), 0);
+    if (total <= 0) throw new Error("Enter at least one box, bag or cover.");
+    await S.ensureSheet(S.TRANSPORT_SHEET);
+    if (data.newPartner) {
+      await S.ensureSheet(S.OPTIONS_SHEET);
+      await S.appendRows(S.OPTIONS_SHEET, [["transporter", data.partner]]);
+    }
+    await S.appendRows(S.TRANSPORT_SHEET, [
+      [data.date, data.partner, data.client, data.direction, data.boxes, data.bags, data.covers, data.notes, new Date().toISOString()],
+    ]);
+    return { ok: true };
+  });
+
 const finalizeSchema = z.object({
-  kind: z.enum(["client", "partner"]),
+  kind: z.enum(["client", "partner", "transport"]),
   name: z.string().min(1),
   from: z.string(),
   to: z.string(),
@@ -312,40 +371,44 @@ export function outsourceKey(r: { createdAt: string; partner: string; party: str
   return [r.createdAt, r.partner, r.party, r.process, r.quantity].join("|");
 }
 
+export function transportKey(r: { createdAt: string; partner: string; client: string; direction: string; boxes: string; bags: string; covers: string }) {
+  return [r.createdAt, r.partner, r.client, r.direction, r.boxes, r.bags, r.covers].join("|");
+}
+
 export const finalizeStatement = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => finalizeSchema.parse(d))
   .handler(async ({ data }) => {
     const S = await import("./sheets.server");
     const { uploadPdf } = await import("./drive.server");
-    const isClient = data.kind === "client";
-    const active = isClient ? S.DELIVERY_SHEET : S.OUTSOURCE_SHEET;
-    const archive = isClient ? S.ARCHIVED_DELIVERY_SHEET : S.ARCHIVED_OUTSOURCE_SHEET;
+    const cfg = {
+      client: { active: S.DELIVERY_SHEET, archive: S.ARCHIVED_DELIVERY_SHEET, col: "I", width: 9, folder: "Client Statements", label: "Client", key: (r: string[]) => [r[8], r[0], r[4], r[5], r[6]] },
+      partner: { active: S.OUTSOURCE_SHEET, archive: S.ARCHIVED_OUTSOURCE_SHEET, col: "F", width: 6, folder: "Outsourcing Reports", label: "Partner", key: (r: string[]) => [r[5], r[1], r[2], r[3], r[4]] },
+      transport: { active: S.TRANSPORT_SHEET, archive: S.ARCHIVED_TRANSPORT_SHEET, col: "I", width: 9, folder: "Transport Statements", label: "Transport", key: (r: string[]) => [r[8], r[1], r[2], r[3], r[4], r[5], r[6]] },
+    }[data.kind];
+    const { active, archive } = cfg;
     await S.ensureSheet(active);
-    const rows = await S.readRange(`${active}!A2:${isClient ? "I" : "F"}`);
-    const keyOf = (r: string[]) =>
-      isClient
-        ? [r[8] ?? "", r[0] ?? "", r[4] ?? "", r[5] ?? "", r[6] ?? ""].join("|")
-        : [r[5] ?? "", r[1] ?? "", r[2] ?? "", r[3] ?? "", r[4] ?? ""].join("|");
+    const rows = await S.readRange(`${active}!A2:${cfg.col}`);
+    const keyOf = (r: string[]) => cfg.key(r).map((v) => v ?? "").join("|");
     const wanted = new Set(data.keys);
     const moving = rows.filter((r) => wanted.has(keyOf(r)));
     if (moving.length !== data.keys.length)
       throw new Error("Some rows changed since the preview. Refresh and try again.");
 
     const file = await uploadPdf(
-      isClient ? "Client Statements" : "Outsourcing Reports",
+      cfg.folder,
       data.fileName,
       data.pdfBase64,
     );
     const now = new Date().toISOString();
     const id = `ST-${now.replace(/[-:TZ.]/g, "").slice(0, 14)}`;
-    const width = isClient ? 9 : 6;
+    const width = cfg.width;
     const pad = (r: string[]) => Array.from({ length: width }, (_, i) => r[i] ?? "");
     await S.ensureSheet(archive);
     await S.appendRows(archive, moving.map((r) => [...pad(r), now, id]));
     await S.rewriteRows(active, rows.filter((r) => !wanted.has(keyOf(r))).map(pad));
     await S.ensureSheet(S.HISTORY_SHEET);
     await S.appendRows(S.HISTORY_SHEET, [
-      [id, isClient ? "Client" : "Partner", data.name, data.from, data.to, String(moving.length), String(data.total), file.id, file.webViewLink, now],
+      [id, cfg.label, data.fileName.replace(/\.pdf$/i, "") || data.name, data.from, data.to, String(moving.length), String(data.total), file.id, file.webViewLink, now],
     ]);
     return { id, url: file.webViewLink };
   });

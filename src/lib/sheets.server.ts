@@ -56,6 +56,8 @@ export const OUTSOURCE_SHEET = "Outsourcing";
 export const ARCHIVED_OUTSOURCE_SHEET = "ArchivedOutsourcing";
 export const HISTORY_SHEET = "StatementHistory";
 export const OPTIONS_SHEET = "Options";
+export const TRANSPORT_SHEET = "Transport";
+export const ARCHIVED_TRANSPORT_SHEET = "ArchivedTransport";
 
 export const SHEET_HEADERS: Record<string, string[]> = {
   [ARCHIVED_DELIVERY_SHEET]: ["Delivery No", "Client Voucher No", "Client", "Date", "Item", "Process", "Quantity", "Notes", "Created At", "Archived At", "Statement ID"],
@@ -63,6 +65,8 @@ export const SHEET_HEADERS: Record<string, string[]> = {
   [ARCHIVED_OUTSOURCE_SHEET]: ["Date", "Partner", "Party", "Process", "Quantity", "Created At", "Archived At", "Statement ID"],
   [HISTORY_SHEET]: ["Statement ID", "Type", "Name", "From", "To", "Rows", "Total Quantity", "Drive File ID", "Drive URL", "Created At"],
   [OPTIONS_SHEET]: ["Type", "Value"],
+  [TRANSPORT_SHEET]: ["Date", "Partner", "Client", "Direction", "Boxes", "Bags", "Covers", "Notes", "Created At"],
+  [ARCHIVED_TRANSPORT_SHEET]: ["Date", "Partner", "Client", "Direction", "Boxes", "Bags", "Covers", "Notes", "Created At", "Archived At", "Statement ID"],
 };
 
 let knownSheets: Set<string> | null = null;
