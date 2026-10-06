@@ -1,8 +1,9 @@
 import { fmtDate } from "./date-format";
+import { BUSINESS, MONTHS } from "./brand";
 
 /** A ready-to-render statement (client delivery statement or partner outsourcing report). */
 export type Statement = {
-  kind: "client" | "partner";
+  kind: "client" | "partner" | "transport";
   name: string;
   from: string;
   to: string;
@@ -17,8 +18,19 @@ export type Statement = {
   keys: string[];
 };
 
-export function fileBase(s: Statement) {
-  return `msulaim-${s.kind === "partner" ? "partner-" : ""}${s.name.replace(/\s+/g, "-")}-${s.from || "start"}_to_${s.to || "today"}`;
+const dmy = (d: string) => (d ? fmtDate(d).replace(/\//g, "-") : "");
+
+/** Default file name: monthly for client/partner, date-to-date for transport. */
+export function defaultFileName(s: Statement, month?: number, year?: number) {
+  if (s.kind === "transport") {
+    const to = s.to || new Date().toISOString().slice(0, 10);
+    return `${s.name} Transport (${s.from ? dmy(s.from) : "Start"} to ${dmy(to)})`;
+  }
+  return `${s.name} Statement (${MONTHS[month ?? 0]} ${year ?? new Date().getFullYear()})`;
+}
+
+export function cleanFileName(n: string) {
+  return n.replace(/[\\/:*?"<>|]/g, "-").trim() || "Statement";
 }
 
 export function download(blob: Blob, name: string) {
@@ -31,6 +43,7 @@ export function download(blob: Blob, name: string) {
 }
 
 const label = (s: Statement) => (s.kind === "client" ? "Client" : "Partner");
+export const statementLabel = label;
 
 export function statementCsv(s: Statement): Blob {
   const n = s.header.length;
@@ -61,15 +74,20 @@ export async function statementPdf(s: Statement): Promise<Blob> {
   const w = doc.internal.pageSize.getWidth();
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text("M Sulaim", w / 2, 50, { align: "center" });
+  doc.text(BUSINESS.name, w / 2, 46, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(BUSINESS.tagline, w / 2, 62, { align: "center" });
+  doc.text(BUSINESS.location, w / 2, 75, { align: "center" });
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.text(s.title, w / 2, 72, { align: "center" });
+  doc.text(s.title, w / 2, 98, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
-  doc.text(`${label(s)}: ${s.name}`, 40, 100);
+  doc.text(`${label(s)}: ${s.name}`, 40, 122);
   const plain = { fillColor: [255, 255, 255] as [number, number, number], lineWidth: 0 };
   autoTable(doc, {
-    startY: 112,
+    startY: 134,
     head: [s.header],
     body: s.rows,
     theme: "grid",

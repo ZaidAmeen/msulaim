@@ -6,6 +6,7 @@ export function HistoryList({ items, empty }: { items: StatementRecord[]; empty:
     <div className="space-y-2.5">
       {items.map((h) => {
         const partner = h.type === "Partner";
+        const transport = h.type === "Transport";
         return (
           <article key={h.id} className="frost rounded-2xl p-4 flex items-center justify-between gap-2">
             <div className="text-[12px] min-w-0">
@@ -13,10 +14,10 @@ export function HistoryList({ items, empty }: { items: StatementRecord[]; empty:
                 <span className="font-display text-[14px] font-semibold truncate">{h.name}</span>
                 <span
                   className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                    partner ? "bg-teal/15 text-tealdeep" : "bg-brand/12 text-branddeep"
+                    transport ? "bg-warn/15 text-warn" : partner ? "bg-teal/15 text-tealdeep" : "bg-brand/12 text-branddeep"
                   }`}
                 >
-                  {partner ? "Partner Report" : "Client Statement"}
+                  {transport ? "Transport" : partner ? "Partner Report" : "Client Statement"}
                 </span>
               </div>
               <div className="text-inkmuted">

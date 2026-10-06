@@ -15,6 +15,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as OutsourcingRouteImport } from './routes/outsourcing'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as TransportRouteImport } from './routes/transport'
 import { Route as VouchersRouteImport } from './routes/vouchers'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransportRoute = TransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VouchersRoute = VouchersRouteImport.update({
   id: '/vouchers',
   path: '/vouchers',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/new': typeof NewRoute
   '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
+  '/transport': typeof TransportRoute
   '/vouchers': typeof VouchersRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/new': typeof NewRoute
   '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
+  '/transport': typeof TransportRoute
   '/vouchers': typeof VouchersRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/new': typeof NewRoute
   '/outsourcing': typeof OutsourcingRoute
   '/reports': typeof ReportsRoute
+  '/transport': typeof TransportRoute
   '/vouchers': typeof VouchersRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/outsourcing'
     | '/reports'
+    | '/transport'
     | '/vouchers'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/outsourcing'
     | '/reports'
+    | '/transport'
     | '/vouchers'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/outsourcing'
     | '/reports'
+    | '/transport'
     | '/vouchers'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   NewRoute: typeof NewRoute
   OutsourcingRoute: typeof OutsourcingRoute
   ReportsRoute: typeof ReportsRoute
+  TransportRoute: typeof TransportRoute
   VouchersRoute: typeof VouchersRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transport': {
+      id: '/transport'
+      path: '/transport'
+      fullPath: '/transport'
+      preLoaderRoute: typeof TransportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/vouchers': {
       id: '/vouchers'
       path: '/vouchers'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   NewRoute: NewRoute,
   OutsourcingRoute: OutsourcingRoute,
   ReportsRoute: ReportsRoute,
+  TransportRoute: TransportRoute,
   VouchersRoute: VouchersRoute,
 }
 export const routeTree = rootRouteImport

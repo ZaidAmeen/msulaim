@@ -29,6 +29,7 @@ const tabs = [
   { key: "all", label: "All" },
   { key: "Client", label: "Client Statements" },
   { key: "Partner", label: "Partner Reports" },
+  { key: "Transport", label: "Transport" },
 ] as const;
 
 function History() {
