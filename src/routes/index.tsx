@@ -52,6 +52,8 @@ function Board() {
     .filter((d) => !d.archived && isBaseProcess(d.process) && !Number.isNaN(new Date(d.date).getTime()) && new Date(d.date).toISOString().slice(0, 7) === month)
     .reduce((s, d) => s + num(d.quantity), 0);
   const outsourced = board.outsourcing.reduce((s, o) => s + num(o.quantity), 0);
+  const pk = (dir: string) =>
+    board.transport.filter((t) => t.direction === dir).reduce((s, t) => s + num(t.boxes) + num(t.bags) + num(t.covers), 0);
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -68,6 +70,7 @@ function Board() {
         <Stat label="Pending" value={pending} note="needs link" tone="text-warn" />
         <Stat label="This month" value={monthDelivered} note="sarees delivered" tone="text-branddeep" />
         <Stat label="Outsourced" value={outsourced} note="open pieces" tone="text-tealdeep" />
+        <Stat label="Transport" value={pk("Inwards") + pk("Outwards")} note={`↓${pk("Inwards")} ↑${pk("Outwards")} pkgs`} tone="text-warn" />
       </div>
 
       <DashboardCharts board={board} />
