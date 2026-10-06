@@ -137,7 +137,7 @@ function Transport() {
         </div>
         <div className="grid grid-cols-3 gap-2">
           {(["boxes", "bags", "covers"] as const).map((k) => (
-            <label key={k} className={lbl}>{k[0].toUpperCase() + k.slice(1)}
+            <label key={k} className={lbl}>{k.charAt(0).toUpperCase() + k.slice(1)}
               <input inputMode="numeric" placeholder="0" className={field} value={f[k]} onChange={(e) => setF({ ...f, [k]: digits(e.target.value) })} />
             </label>
           ))}
