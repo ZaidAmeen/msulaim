@@ -44,6 +44,14 @@ export function DashboardCharts({ board }: { board: Board }) {
     sum(partners, o.partner, num(o.quantity));
     sum(processes, o.process, 0);
   }
+  const tp = new Map<string, { name: string; Inwards: number; Outwards: number }>();
+  for (const t of board.transport) {
+    const e = tp.get(t.partner) ?? { name: t.partner, Inwards: 0, Outwards: 0 };
+    const n = num(t.boxes) + num(t.bags) + num(t.covers);
+    if (t.direction === "Inwards") e.Inwards += n;
+    else e.Outwards += n;
+    tp.set(t.partner, e);
+  }
   const trend = days.map((d) => ({ name: d.slice(8) + "/" + d.slice(5, 7), value: daily.get(d) ?? 0 }));
 
   return (
@@ -90,6 +98,21 @@ export function DashboardCharts({ board }: { board: Board }) {
           </ResponsiveContainer>
         ) : (
           <div className="h-full grid place-items-center text-[12px] text-inkmuted">No open outsourced work.</div>
+        )}
+      </Card>
+      <Card title="Transport packages (open)">
+        {tp.size ? (
+          <ResponsiveContainer>
+            <BarChart data={[...tp.values()]}>
+              <XAxis dataKey="name" tick={axis} />
+              <YAxis tick={axis} width={28} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="Inwards" stackId="t" fill="var(--teal)" />
+              <Bar dataKey="Outwards" stackId="t" fill="var(--warn)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full grid place-items-center text-[12px] text-inkmuted">No open transport entries.</div>
         )}
       </Card>
     </div>
