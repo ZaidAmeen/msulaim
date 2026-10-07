@@ -14,13 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      allowed_users: {
+        Row: {
+          created_at: string
+          email: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_allowed: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
