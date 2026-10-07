@@ -1,8 +1,14 @@
 # Roadmap
 
-- [x] Business branding (M Sulaim · Dyeing & Processing Services · Bengaluru, Karnataka) in app header + PDFs
-- [x] Custom file names: month selector (full month names) for client/partner; date-to-date for transport; editable name
-- [x] Transport module: form (date, partner, client, inwards/outwards, boxes/bags/covers), partner statements, finalize & archive to Drive
-- [x] Transport on dashboard (stat + chart) and History tab
-- [ ] Login (email + password), invite-only: zaidameen116@gmail.com
-- [ ] Later: redesign (menu drawer, account settings, dark theme)
+- [x] Business branding in app header + PDFs
+- [x] Custom file names
+- [x] Transport module
+- [x] Transport on dashboard and History tab
+- [ ] 1. Login (email + password), invite-only allowlist (zaidameen116@gmail.com)
+- [ ] 2. Drive PDFs viewable by anyone with link
+- [ ] 3. Master tab: view/edit/delete clients, items, processes, partners
+- [ ] 4. Edit/delete for every entry (vouchers, deliveries, outsourcing, transport)
+- [ ] 5. Metrics/charts show all pending (non-finalized) data, no day windows
+- [ ] 6. App navigation: fixed header (company name → dashboard), bottom nav (Dashboard, +, Client vouchers), left drawer, custom logo
+- [ ] 7. Settings: profile, password change, dark mode
+- [ ] 8. Settings: edit company name/subtitle system-wide
