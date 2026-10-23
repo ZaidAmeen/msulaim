@@ -1,14 +1,18 @@
-# Welcome to your Lovable project
+# M Sulaim App
+
+I want an internal tracking and report business app. I get clients vouchers, and I give them my own delivery voucher. Both are connected to eachother meaning the delivery voucher has the client voucher number along with its details. I'll be using google sheets as the database.
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://msulaim.lovable.app
+
 ## Build with Lovable
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/8a728ac6-2359-4145-b561-5e05ae93260a).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
@@ -20,10 +24,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
-
-## Built with
-
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
