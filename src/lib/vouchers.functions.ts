@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAllowed } from "./access-middleware";
 import { z } from "zod";
 
 export type ClientVoucher = {
