@@ -5,7 +5,7 @@ import { boardQuery } from "@/lib/voucher-queries";
 import { useState } from "react";
 import { HistoryList } from "@/components/HistoryList";
 
-export const Route = createFileRoute("/history")({
+export const Route = createFileRoute("/_authenticated/history")({
   head: () => ({
     meta: [
       { title: "Statement history — M Sulaim" },

@@ -9,91 +9,108 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as DeliveriesRouteImport } from './routes/deliveries'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as NewRouteImport } from './routes/new'
-import { Route as OutsourcingRouteImport } from './routes/outsourcing'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as TransportRouteImport } from './routes/transport'
-import { Route as VouchersRouteImport } from './routes/vouchers'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedDeliveriesRouteImport } from './routes/_authenticated/deliveries'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
+import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
+import { Route as AuthenticatedOutsourcingRouteImport } from './routes/_authenticated/outsourcing'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedTransportRouteImport } from './routes/_authenticated/transport'
+import { Route as AuthenticatedVouchersRouteImport } from './routes/_authenticated/vouchers'
 
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const DeliveriesRoute = DeliveriesRouteImport.update({
+const AuthenticatedDeliveriesRoute = AuthenticatedDeliveriesRouteImport.update({
   id: '/deliveries',
   path: '/deliveries',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const HistoryRoute = HistoryRouteImport.update({
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const NewRoute = NewRouteImport.update({
+const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const OutsourcingRoute = OutsourcingRouteImport.update({
-  id: '/outsourcing',
-  path: '/outsourcing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
+const AuthenticatedOutsourcingRoute =
+  AuthenticatedOutsourcingRouteImport.update({
+    id: '/outsourcing',
+    path: '/outsourcing',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const TransportRoute = TransportRouteImport.update({
+const AuthenticatedTransportRoute = AuthenticatedTransportRouteImport.update({
   id: '/transport',
   path: '/transport',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const VouchersRoute = VouchersRouteImport.update({
+const AuthenticatedVouchersRoute = AuthenticatedVouchersRouteImport.update({
   id: '/vouchers',
   path: '/vouchers',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/deliveries': typeof DeliveriesRoute
-  '/history': typeof HistoryRoute
-  '/new': typeof NewRoute
-  '/outsourcing': typeof OutsourcingRoute
-  '/reports': typeof ReportsRoute
-  '/transport': typeof TransportRoute
-  '/vouchers': typeof VouchersRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/new': typeof AuthenticatedNewRoute
+  '/outsourcing': typeof AuthenticatedOutsourcingRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/transport': typeof AuthenticatedTransportRoute
+  '/vouchers': typeof AuthenticatedVouchersRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/deliveries': typeof DeliveriesRoute
-  '/history': typeof HistoryRoute
-  '/new': typeof NewRoute
-  '/outsourcing': typeof OutsourcingRoute
-  '/reports': typeof ReportsRoute
-  '/transport': typeof TransportRoute
-  '/vouchers': typeof VouchersRoute
+  '/auth': typeof AuthRoute
+  '/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/new': typeof AuthenticatedNewRoute
+  '/outsourcing': typeof AuthenticatedOutsourcingRoute
+  '/reports': typeof AuthenticatedReportsRoute
+  '/transport': typeof AuthenticatedTransportRoute
+  '/vouchers': typeof AuthenticatedVouchersRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/deliveries': typeof DeliveriesRoute
-  '/history': typeof HistoryRoute
-  '/new': typeof NewRoute
-  '/outsourcing': typeof OutsourcingRoute
-  '/reports': typeof ReportsRoute
-  '/transport': typeof TransportRoute
-  '/vouchers': typeof VouchersRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/deliveries': typeof AuthenticatedDeliveriesRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/new': typeof AuthenticatedNewRoute
+  '/_authenticated/outsourcing': typeof AuthenticatedOutsourcingRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/transport': typeof AuthenticatedTransportRoute
+  '/_authenticated/vouchers': typeof AuthenticatedVouchersRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/deliveries'
     | '/history'
     | '/new'
@@ -103,7 +120,7 @@ export interface FileRouteTypes {
     | '/vouchers'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/auth'
     | '/deliveries'
     | '/history'
     | '/new'
@@ -111,99 +128,129 @@ export interface FileRouteTypes {
     | '/reports'
     | '/transport'
     | '/vouchers'
+    | '/'
   id:
     | '__root__'
-    | '/'
-    | '/deliveries'
-    | '/history'
-    | '/new'
-    | '/outsourcing'
-    | '/reports'
-    | '/transport'
-    | '/vouchers'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/deliveries'
+    | '/_authenticated/history'
+    | '/_authenticated/new'
+    | '/_authenticated/outsourcing'
+    | '/_authenticated/reports'
+    | '/_authenticated/transport'
+    | '/_authenticated/vouchers'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  DeliveriesRoute: typeof DeliveriesRoute
-  HistoryRoute: typeof HistoryRoute
-  NewRoute: typeof NewRoute
-  OutsourcingRoute: typeof OutsourcingRoute
-  ReportsRoute: typeof ReportsRoute
-  TransportRoute: typeof TransportRoute
-  VouchersRoute: typeof VouchersRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/deliveries': {
-      id: '/deliveries'
+    '/_authenticated/deliveries': {
+      id: '/_authenticated/deliveries'
       path: '/deliveries'
       fullPath: '/deliveries'
-      preLoaderRoute: typeof DeliveriesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedDeliveriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/history': {
-      id: '/history'
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
       path: '/history'
       fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/new': {
-      id: '/new'
+    '/_authenticated/new': {
+      id: '/_authenticated/new'
       path: '/new'
       fullPath: '/new'
-      preLoaderRoute: typeof NewRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/outsourcing': {
-      id: '/outsourcing'
+    '/_authenticated/outsourcing': {
+      id: '/_authenticated/outsourcing'
       path: '/outsourcing'
       fullPath: '/outsourcing'
-      preLoaderRoute: typeof OutsourcingRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedOutsourcingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/reports': {
-      id: '/reports'
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
       path: '/reports'
       fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/transport': {
-      id: '/transport'
+    '/_authenticated/transport': {
+      id: '/_authenticated/transport'
       path: '/transport'
       fullPath: '/transport'
-      preLoaderRoute: typeof TransportRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedTransportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/vouchers': {
-      id: '/vouchers'
+    '/_authenticated/vouchers': {
+      id: '/_authenticated/vouchers'
       path: '/vouchers'
       fullPath: '/vouchers'
-      preLoaderRoute: typeof VouchersRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedVouchersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDeliveriesRoute: typeof AuthenticatedDeliveriesRoute
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedNewRoute: typeof AuthenticatedNewRoute
+  AuthenticatedOutsourcingRoute: typeof AuthenticatedOutsourcingRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedTransportRoute: typeof AuthenticatedTransportRoute
+  AuthenticatedVouchersRoute: typeof AuthenticatedVouchersRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDeliveriesRoute: AuthenticatedDeliveriesRoute,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedNewRoute: AuthenticatedNewRoute,
+  AuthenticatedOutsourcingRoute: AuthenticatedOutsourcingRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedTransportRoute: AuthenticatedTransportRoute,
+  AuthenticatedVouchersRoute: AuthenticatedVouchersRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  DeliveriesRoute: DeliveriesRoute,
-  HistoryRoute: HistoryRoute,
-  NewRoute: NewRoute,
-  OutsourcingRoute: OutsourcingRoute,
-  ReportsRoute: ReportsRoute,
-  TransportRoute: TransportRoute,
-  VouchersRoute: VouchersRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

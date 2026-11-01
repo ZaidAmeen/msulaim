@@ -7,7 +7,7 @@ import { num, openVouchers, statusOf } from "@/lib/voucher-utils";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { isBaseProcess } from "@/lib/options";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "M Sulaim — Client & delivery voucher board" },

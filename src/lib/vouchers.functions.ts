@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireAllowed } from "./access-middleware";
 import { z } from "zod";
 
 export type ClientVoucher = {
@@ -71,7 +73,9 @@ export type Board = {
   options: { partners: string[]; processes: string[]; transporters: string[] };
 };
 
-export const getBoard = createServerFn({ method: "GET" }).handler(async (): Promise<Board> => {
+export const getBoard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .handler(async (): Promise<Board> => {
   const S = await import("./sheets.server");
   const { readRange, readSheet, CLIENT_SHEET, DELIVERY_SHEET } = S;
   const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await Promise.all([
@@ -192,6 +196,7 @@ const clientSchema = z.object({
 });
 
 export const addClientVoucher = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
   .inputValidator((d: unknown) => clientSchema.parse(d))
   .handler(async ({ data }) => {
     const { appendRows, readRange, CLIENT_SHEET } = await import("./sheets.server");
@@ -230,6 +235,7 @@ const deliverySchema = z.object({
 });
 
 export const addDeliveryVoucher = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
   .inputValidator((d: unknown) => deliverySchema.parse(d))
   .handler(async ({ data }) => {
     const { appendRows, readRange, CLIENT_SHEET, DELIVERY_SHEET } = await import("./sheets.server");
@@ -303,6 +309,7 @@ const outsourceSchema = z.object({
 });
 
 export const addOutsourcing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
   .inputValidator((d: unknown) => outsourceSchema.parse(d))
   .handler(async ({ data }) => {
     const S = await import("./sheets.server");
@@ -335,6 +342,7 @@ const transportSchema = z.object({
 });
 
 export const addTransport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
   .inputValidator((d: unknown) => transportSchema.parse(d))
   .handler(async ({ data }) => {
     const S = await import("./sheets.server");
@@ -376,6 +384,7 @@ export function transportKey(r: { createdAt: string; partner: string; client: st
 }
 
 export const finalizeStatement = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
   .inputValidator((d: unknown) => finalizeSchema.parse(d))
   .handler(async ({ data }) => {
     const S = await import("./sheets.server");

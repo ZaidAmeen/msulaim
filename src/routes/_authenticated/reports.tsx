@@ -10,7 +10,7 @@ import { deliveryKey } from "@/lib/vouchers.functions";
 import type { Statement } from "@/lib/statement";
 import { StatementPreview } from "@/components/StatementPreview";
 
-export const Route = createFileRoute("/reports")({
+export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
       { title: "Client statement — M Sulaim" },

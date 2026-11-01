@@ -13,7 +13,7 @@ import { fmtDate, processRank } from "@/lib/date-format";
 import { num } from "@/lib/voucher-utils";
 import type { Statement } from "@/lib/statement";
 
-export const Route = createFileRoute("/outsourcing")({
+export const Route = createFileRoute("/_authenticated/outsourcing")({
   head: () => ({
     meta: [
       { title: "Outsourcing — M Sulaim" },

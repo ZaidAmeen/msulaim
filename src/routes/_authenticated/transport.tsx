@@ -13,7 +13,7 @@ import { fmtDate } from "@/lib/date-format";
 import { num } from "@/lib/voucher-utils";
 import type { Statement } from "@/lib/statement";
 
-export const Route = createFileRoute("/transport")({
+export const Route = createFileRoute("/_authenticated/transport")({
   head: () => ({
     meta: [
       { title: "Transport — M Sulaim" },
