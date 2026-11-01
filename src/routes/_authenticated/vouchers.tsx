@@ -6,7 +6,7 @@ import { VoucherCard } from "@/components/VoucherCard";
 import { boardQuery } from "@/lib/voucher-queries";
 import { openVouchers, statusOf, type Status } from "@/lib/voucher-utils";
 
-export const Route = createFileRoute("/vouchers")({
+export const Route = createFileRoute("/_authenticated/vouchers")({
   head: () => ({
     meta: [
       { title: "Client vouchers — M Sulaim" },

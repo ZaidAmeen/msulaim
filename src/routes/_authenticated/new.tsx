@@ -8,7 +8,7 @@ import { itemStatus, num } from "@/lib/voucher-utils";
 import { CLIENTS, EXTRA_PROCESSES, ITEMS, withExisting } from "@/lib/options";
 
 
-export const Route = createFileRoute("/new")({
+export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
       { title: "New voucher — M Sulaim" },

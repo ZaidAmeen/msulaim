@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
 
-export const Route = createFileRoute("/deliveries")({
+export const Route = createFileRoute("/_authenticated/deliveries")({
   head: () => ({
     meta: [
       { title: "Delivery vouchers — M Sulaim" },
