@@ -35,6 +35,11 @@ export function AppShell({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const navigate = useNavigate();
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
   return (
     <div className="appbg min-h-screen w-full font-body text-ink antialiased relative">
       <div className="mx-auto w-full max-w-[430px]">
@@ -51,13 +56,23 @@ export function AppShell({
                 <div className="text-[10px] text-inkmuted -mt-0.5">{subtitle ?? "Dyeing & Processing Services"}</div>
               </div>
             </div>
-            <Link
-              to="/history"
-              aria-label="Statement history"
-              className="h-9 px-3 rounded-full glass grid place-items-center text-[11px] font-semibold text-brand"
-            >
-              History
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/history"
+                aria-label="Statement history"
+                className="h-9 px-3 rounded-full glass grid place-items-center text-[11px] font-semibold text-brand"
+              >
+                History
+              </Link>
+              <button
+                onClick={() => void signOut()}
+                aria-label="Sign out"
+                title="Sign out"
+                className="h-9 w-9 rounded-full glass grid place-items-center text-[13px] text-inkmuted"
+              >
+                ⎋
+              </button>
+            </div>
           </div>
         </header>
 
