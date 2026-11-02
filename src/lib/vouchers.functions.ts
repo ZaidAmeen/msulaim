@@ -88,8 +88,8 @@ export const getBoard = createServerFn({ method: "GET" })
     if (boardCache && now - boardCache.at < 45_000) return boardCache.board;
     const S = await import("./sheets.server");
     const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await S.readBoardRaw();
-  const at = (r: string[], i: number) => r[i] ?? "";
-  return {
+    const at = (r: string[], i: number) => r[i] ?? "";
+    const board: Board = {
     clientVouchers: (() => {
       const map = new Map<string, ClientVoucher>();
       for (const r of cRows) {
@@ -109,6 +109,7 @@ export const getBoard = createServerFn({ method: "GET" })
           quantity: "",
           notes: at(r, 6),
           createdAt: at(r, 7),
+          completed: at(r, 8).trim().toLowerCase() === "yes",
           items: [{ item: at(r, 3), quantity: at(r, 5) }],
         });
       }
