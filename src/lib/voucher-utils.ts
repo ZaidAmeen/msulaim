@@ -67,8 +67,15 @@ export function itemStatus(board: Board, v: ClientVoucher) {
   });
 }
 
+/** Fully delivered: every item cleared, or manually marked (no Finishing/Return orders). */
+export function isDelivered(board: Board, v: ClientVoucher): boolean {
+  if (v.completed) return true;
+  return itemStatus(board, v).every((i) => i.remaining === 0);
+}
+
 /** Fully delivered and every linked delivery already finalized — hidden from daily views. */
 export function isClosed(board: Board, v: ClientVoucher): boolean {
+  if (v.completed) return true;
   const linked = deliveriesFor(board, v.voucherNo);
   if (!linked.length || !linked.every((d) => d.archived)) return false;
   return itemStatus(board, v).every((i) => i.remaining === 0);

@@ -12,6 +12,8 @@ export type ClientVoucher = {
   quantity: string;
   notes: string;
   createdAt: string;
+  /** Manually marked fully delivered (orders with no Finishing/Return work). */
+  completed: boolean;
   /** One entry per item row in the sheet (a voucher can carry several items). */
   items: { item: string; quantity: string }[];
 };
@@ -73,22 +75,21 @@ export type Board = {
   options: { partners: string[]; processes: string[]; transporters: string[] };
 };
 
+/** 45s server-side board cache; purged by every write so users always see fresh data. */
+let boardCache: { at: number; board: Board } | null = null;
+export function invalidateBoard() {
+  boardCache = null;
+}
+
 export const getBoard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireAllowed])
   .handler(async (): Promise<Board> => {
-  const S = await import("./sheets.server");
-  const { readRange, readSheet, CLIENT_SHEET, DELIVERY_SHEET } = S;
-  const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await Promise.all([
-    readRange(`${CLIENT_SHEET}!A2:H`),
-    readRange(`${DELIVERY_SHEET}!A2:I`),
-    readSheet(S.ARCHIVED_DELIVERY_SHEET, "K"),
-    readSheet(S.OUTSOURCE_SHEET, "F"),
-    readSheet(S.HISTORY_SHEET, "J"),
-    readSheet(S.OPTIONS_SHEET, "B"),
-    readSheet(S.TRANSPORT_SHEET, "I"),
-  ]);
-  const at = (r: string[], i: number) => r[i] ?? "";
-  return {
+    const now = Date.now();
+    if (boardCache && now - boardCache.at < 45_000) return boardCache.board;
+    const S = await import("./sheets.server");
+    const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await S.readBoardRaw();
+    const at = (r: string[], i: number) => r[i] ?? "";
+    const board: Board = {
     clientVouchers: (() => {
       const map = new Map<string, ClientVoucher>();
       for (const r of cRows) {
@@ -108,6 +109,7 @@ export const getBoard = createServerFn({ method: "GET" })
           quantity: "",
           notes: at(r, 6),
           createdAt: at(r, 7),
+          completed: at(r, 8).trim().toLowerCase() === "yes",
           items: [{ item: at(r, 3), quantity: at(r, 5) }],
         });
       }
@@ -184,8 +186,10 @@ export const getBoard = createServerFn({ method: "GET" })
         createdAt: at(r, 8),
       }))
       .reverse(),
-  };
-});
+    };
+    boardCache = { at: now, board };
+    return board;
+  });
 
 const clientSchema = z.object({
   voucherNo: z.string().min(1),
@@ -216,8 +220,33 @@ export const addClientVoucher = createServerFn({ method: "POST" })
         i.quantity,
         data.notes,
         now,
+        "",
       ]),
     );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+/** Manually mark a voucher fully delivered (for orders without Finishing/Return). */
+export const setVoucherCompleted = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) =>
+    z.object({ voucherNo: z.string().min(1), completed: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+    const key = data.voucherNo.trim().toLowerCase();
+    const pad = (r: string[]) => Array.from({ length: 9 }, (_, i) => r[i] ?? "");
+    let hit = false;
+    const updated = rows.map((r) => {
+      if ((r[0] ?? "").trim().toLowerCase() !== key) return pad(r);
+      hit = true;
+      return pad(r).map((v, i) => (i === 8 ? (data.completed ? "yes" : "") : v));
+    });
+    if (!hit) throw new Error(`Client voucher ${data.voucherNo} not found.`);
+    await S.rewriteRows(S.CLIENT_SHEET, updated);
+    invalidateBoard();
     return { ok: true };
   });
 
@@ -295,6 +324,7 @@ export const addDeliveryVoucher = createServerFn({ method: "POST" })
         now,
       ]),
     );
+    invalidateBoard();
     return { ok: true };
   });
 
@@ -325,6 +355,7 @@ export const addOutsourcing = createServerFn({ method: "POST" })
     await S.appendRows(S.OUTSOURCE_SHEET, [
       [data.date, data.partner, data.party, data.process, data.quantity, new Date().toISOString()],
     ]);
+    invalidateBoard();
     return { ok: true };
   });
 
@@ -356,6 +387,7 @@ export const addTransport = createServerFn({ method: "POST" })
     await S.appendRows(S.TRANSPORT_SHEET, [
       [data.date, data.partner, data.client, data.direction, data.boxes, data.bags, data.covers, data.notes, new Date().toISOString()],
     ]);
+    invalidateBoard();
     return { ok: true };
   });
 
@@ -415,9 +447,81 @@ export const finalizeStatement = createServerFn({ method: "POST" })
     await S.ensureSheet(archive);
     await S.appendRows(archive, moving.map((r) => [...pad(r), now, id]));
     await S.rewriteRows(active, rows.filter((r) => !wanted.has(keyOf(r))).map(pad));
+
+    // Client statements also clear the intake: once every delivery row of a
+    // client voucher has been archived (this statement covered them all) and
+    // the voucher is fully delivered (or manually marked), its ClientVouchers
+    // rows move to ArchivedClientVouchers and leave the active tab.
+    if (data.kind === "client") {
+      const isBase = (p: string | undefined) => {
+        const t = (p ?? "").trim().toLowerCase();
+        return t === "" || t === "finishing" || t === "return";
+      };
+      const toNum = (v: string | undefined) => {
+        const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(n) ? n : 0;
+      };
+      const cRows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+      const stillActive = rows.filter((r) => !wanted.has(keyOf(r)));
+      const [archivedDeliveries] = await S.batchRead([`${S.ARCHIVED_DELIVERY_SHEET}!A2:K`]);
+      const allDeliveries = [...stillActive, ...archivedDeliveries];
+      const cPad = (r: string[]) => Array.from({ length: 9 }, (_, i) => r[i] ?? "");
+
+      const groups = new Map<string, { rows: string[][] }>();
+      for (const r of cRows) {
+        const vk = (r[0] ?? "").trim().toLowerCase();
+        if (!vk) continue;
+        const g = groups.get(vk) ?? { rows: [] };
+        g.rows.push(r);
+        groups.set(vk, g);
+      }
+      const activeLeft = new Set(stillActive.map((r) => (r[1] ?? "").trim().toLowerCase()));
+      const clearVouchers: string[] = [];
+      for (const [vk, g] of groups) {
+        if (activeLeft.has(vk)) continue; // some deliveries not in this statement yet
+        const completed = g.rows.some((r) => (r[8] ?? "").trim().toLowerCase() === "yes");
+        if (!completed) {
+          const single = g.rows.length === 1;
+          const orderedByItem = new Map<string, number>();
+          for (const r of g.rows) {
+            const ik = (r[3] ?? "").trim().toLowerCase();
+            const k = single && !ik ? "" : ik;
+            orderedByItem.set(k, (orderedByItem.get(k) ?? 0) + toNum(r[5]));
+          }
+          const deliveredByItem = new Map<string, number>();
+          for (const d of allDeliveries) {
+            if ((d[1] ?? "").trim().toLowerCase() !== vk || !isBase(d[5])) continue;
+            const ik = (d[4] ?? "").trim().toLowerCase();
+            const k = single && !ik ? "" : ik;
+            deliveredByItem.set(k, (deliveredByItem.get(k) ?? 0) + toNum(d[6]));
+          }
+          const fully = [...orderedByItem].every(
+            ([k, ordered]) => (deliveredByItem.get(k) ?? 0) >= ordered,
+          );
+          if (!fully) continue;
+        }
+        clearVouchers.push(vk);
+      }
+      if (clearVouchers.length) {
+        const keep = cRows.filter(
+          (r) => !clearVouchers.includes((r[0] ?? "").trim().toLowerCase()),
+        );
+        const clearing = cRows.filter((r) =>
+          clearVouchers.includes((r[0] ?? "").trim().toLowerCase()),
+        );
+        await S.ensureSheet(S.ARCHIVED_CLIENT_SHEET);
+        await S.appendRows(
+          S.ARCHIVED_CLIENT_SHEET,
+          clearing.map((r) => [...cPad(r), now, id]),
+        );
+        await S.rewriteRows(S.CLIENT_SHEET, keep.map(cPad));
+      }
+    }
+
     await S.ensureSheet(S.HISTORY_SHEET);
     await S.appendRows(S.HISTORY_SHEET, [
       [id, cfg.label, data.fileName.replace(/\.pdf$/i, "") || data.name, data.from, data.to, String(moving.length), String(data.total), file.id, file.webViewLink, now],
     ]);
+    invalidateBoard();
     return { id, url: file.webViewLink };
   });

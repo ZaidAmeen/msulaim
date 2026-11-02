@@ -60,5 +60,17 @@ export async function uploadPdf(subfolder: string, fileName: string, base64: str
       body,
     }),
   )) as { id: string; webViewLink: string };
+  // Anyone with the link can view (best effort — never blocks the upload).
+  try {
+    await handle(
+      await fetch(`${DRIVE}/drive/v3/files/${file.id}/permissions`, {
+        method: "POST",
+        headers: headers({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ role: "reader", type: "anyone" }),
+      }),
+    );
+  } catch (e) {
+    console.error("Could not enable link sharing for Drive file", file.id, e);
+  }
   return file;
 }
