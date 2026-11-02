@@ -447,9 +447,81 @@ export const finalizeStatement = createServerFn({ method: "POST" })
     await S.ensureSheet(archive);
     await S.appendRows(archive, moving.map((r) => [...pad(r), now, id]));
     await S.rewriteRows(active, rows.filter((r) => !wanted.has(keyOf(r))).map(pad));
+
+    // Client statements also clear the intake: once every delivery row of a
+    // client voucher has been archived (this statement covered them all) and
+    // the voucher is fully delivered (or manually marked), its ClientVouchers
+    // rows move to ArchivedClientVouchers and leave the active tab.
+    if (data.kind === "client") {
+      const isBase = (p: string | undefined) => {
+        const t = (p ?? "").trim().toLowerCase();
+        return t === "" || t === "finishing" || t === "return";
+      };
+      const toNum = (v: string | undefined) => {
+        const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(n) ? n : 0;
+      };
+      const cRows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+      const stillActive = rows.filter((r) => !wanted.has(keyOf(r)));
+      const [archivedDeliveries] = await S.batchRead([`${S.ARCHIVED_DELIVERY_SHEET}!A2:K`]);
+      const allDeliveries = [...stillActive, ...archivedDeliveries];
+      const cPad = (r: string[]) => Array.from({ length: 9 }, (_, i) => r[i] ?? "");
+
+      const groups = new Map<string, { rows: string[][] }>();
+      for (const r of cRows) {
+        const vk = (r[0] ?? "").trim().toLowerCase();
+        if (!vk) continue;
+        const g = groups.get(vk) ?? { rows: [] };
+        g.rows.push(r);
+        groups.set(vk, g);
+      }
+      const activeLeft = new Set(stillActive.map((r) => (r[1] ?? "").trim().toLowerCase()));
+      const clearVouchers: string[] = [];
+      for (const [vk, g] of groups) {
+        if (activeLeft.has(vk)) continue; // some deliveries not in this statement yet
+        const completed = g.rows.some((r) => (r[8] ?? "").trim().toLowerCase() === "yes");
+        if (!completed) {
+          const single = g.rows.length === 1;
+          const orderedByItem = new Map<string, number>();
+          for (const r of g.rows) {
+            const ik = (r[3] ?? "").trim().toLowerCase();
+            const k = single && !ik ? "" : ik;
+            orderedByItem.set(k, (orderedByItem.get(k) ?? 0) + toNum(r[5]));
+          }
+          const deliveredByItem = new Map<string, number>();
+          for (const d of allDeliveries) {
+            if ((d[1] ?? "").trim().toLowerCase() !== vk || !isBase(d[5])) continue;
+            const ik = (d[4] ?? "").trim().toLowerCase();
+            const k = single && !ik ? "" : ik;
+            deliveredByItem.set(k, (deliveredByItem.get(k) ?? 0) + toNum(d[6]));
+          }
+          const fully = [...orderedByItem].every(
+            ([k, ordered]) => (deliveredByItem.get(k) ?? 0) >= ordered,
+          );
+          if (!fully) continue;
+        }
+        clearVouchers.push(vk);
+      }
+      if (clearVouchers.length) {
+        const keep = cRows.filter(
+          (r) => !clearVouchers.includes((r[0] ?? "").trim().toLowerCase()),
+        );
+        const clearing = cRows.filter((r) =>
+          clearVouchers.includes((r[0] ?? "").trim().toLowerCase()),
+        );
+        await S.ensureSheet(S.ARCHIVED_CLIENT_SHEET);
+        await S.appendRows(
+          S.ARCHIVED_CLIENT_SHEET,
+          clearing.map((r) => [...cPad(r), now, id]),
+        );
+        await S.rewriteRows(S.CLIENT_SHEET, keep.map(cPad));
+      }
+    }
+
     await S.ensureSheet(S.HISTORY_SHEET);
     await S.appendRows(S.HISTORY_SHEET, [
       [id, cfg.label, data.fileName.replace(/\.pdf$/i, "") || data.name, data.from, data.to, String(moving.length), String(data.total), file.id, file.webViewLink, now],
     ]);
+    invalidateBoard();
     return { id, url: file.webViewLink };
   });
