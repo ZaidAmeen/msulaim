@@ -186,8 +186,10 @@ export const getBoard = createServerFn({ method: "GET" })
         createdAt: at(r, 8),
       }))
       .reverse(),
-  };
-});
+    };
+    boardCache = { at: now, board };
+    return board;
+  });
 
 const clientSchema = z.object({
   voucherNo: z.string().min(1),
@@ -218,8 +220,33 @@ export const addClientVoucher = createServerFn({ method: "POST" })
         i.quantity,
         data.notes,
         now,
+        "",
       ]),
     );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+/** Manually mark a voucher fully delivered (for orders without Finishing/Return). */
+export const setVoucherCompleted = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) =>
+    z.object({ voucherNo: z.string().min(1), completed: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+    const key = data.voucherNo.trim().toLowerCase();
+    const pad = (r: string[]) => Array.from({ length: 9 }, (_, i) => r[i] ?? "");
+    let hit = false;
+    const updated = rows.map((r) => {
+      if ((r[0] ?? "").trim().toLowerCase() !== key) return pad(r);
+      hit = true;
+      return pad(r).map((v, i) => (i === 8 ? (data.completed ? "yes" : "") : v));
+    });
+    if (!hit) throw new Error(`Client voucher ${data.voucherNo} not found.`);
+    await S.rewriteRows(S.CLIENT_SHEET, updated);
+    invalidateBoard();
     return { ok: true };
   });
 
