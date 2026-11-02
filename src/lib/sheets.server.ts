@@ -144,10 +144,21 @@ export async function batchRead(ranges: string[]): Promise<string[][][]> {
   return (json.valueRanges ?? []).map((vr) => clean(vr.values));
 }
 
+export type BoardRows = [
+  client: string[][],
+  delivery: string[][],
+  archivedDelivery: string[][],
+  outsource: string[][],
+  history: string[][],
+  options: string[][],
+  transport: string[][],
+];
+
 /** Ensure the board tabs exist, then read all of them in a single batch call. */
-export async function readBoardRaw(): Promise<string[][][]> {
+export async function readBoardRaw(): Promise<BoardRows> {
   for (const name of BOARD_SHEETS) await ensureSheet(name);
-  return batchRead(BOARD_RANGES);
+  const [c, d, a, o, h, opt, t] = await batchRead(BOARD_RANGES);
+  return [c ?? [], d ?? [], a ?? [], o ?? [], h ?? [], opt ?? [], t ?? []];
 }
 
 /** Replace all data rows (below the header) of a tab. */

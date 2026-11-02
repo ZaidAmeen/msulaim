@@ -463,7 +463,8 @@ export const finalizeStatement = createServerFn({ method: "POST" })
       };
       const cRows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
       const stillActive = rows.filter((r) => !wanted.has(keyOf(r)));
-      const [archivedDeliveries] = await S.batchRead([`${S.ARCHIVED_DELIVERY_SHEET}!A2:K`]);
+      const archivedReads = await S.batchRead([`${S.ARCHIVED_DELIVERY_SHEET}!A2:K`]);
+      const archivedDeliveries = archivedReads[0] ?? [];
       const allDeliveries = [...stillActive, ...archivedDeliveries];
       const cPad = (r: string[]) => Array.from({ length: 9 }, (_, i) => r[i] ?? "");
 
