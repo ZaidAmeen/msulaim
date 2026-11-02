@@ -324,6 +324,7 @@ export const addDeliveryVoucher = createServerFn({ method: "POST" })
         now,
       ]),
     );
+    invalidateBoard();
     return { ok: true };
   });
 
