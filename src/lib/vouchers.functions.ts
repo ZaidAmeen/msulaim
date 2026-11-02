@@ -12,6 +12,8 @@ export type ClientVoucher = {
   quantity: string;
   notes: string;
   createdAt: string;
+  /** Manually marked fully delivered (orders with no Finishing/Return work). */
+  completed: boolean;
   /** One entry per item row in the sheet (a voucher can carry several items). */
   items: { item: string; quantity: string }[];
 };
@@ -73,20 +75,19 @@ export type Board = {
   options: { partners: string[]; processes: string[]; transporters: string[] };
 };
 
+/** 45s server-side board cache; purged by every write so users always see fresh data. */
+let boardCache: { at: number; board: Board } | null = null;
+export function invalidateBoard() {
+  boardCache = null;
+}
+
 export const getBoard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth, requireAllowed])
   .handler(async (): Promise<Board> => {
-  const S = await import("./sheets.server");
-  const { readRange, readSheet, CLIENT_SHEET, DELIVERY_SHEET } = S;
-  const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await Promise.all([
-    readRange(`${CLIENT_SHEET}!A2:H`),
-    readRange(`${DELIVERY_SHEET}!A2:I`),
-    readSheet(S.ARCHIVED_DELIVERY_SHEET, "K"),
-    readSheet(S.OUTSOURCE_SHEET, "F"),
-    readSheet(S.HISTORY_SHEET, "J"),
-    readSheet(S.OPTIONS_SHEET, "B"),
-    readSheet(S.TRANSPORT_SHEET, "I"),
-  ]);
+    const now = Date.now();
+    if (boardCache && now - boardCache.at < 45_000) return boardCache.board;
+    const S = await import("./sheets.server");
+    const [cRows, dRows, aRows, oRows, hRows, optRows, tRows] = await S.readBoardRaw();
   const at = (r: string[], i: number) => r[i] ?? "";
   return {
     clientVouchers: (() => {
