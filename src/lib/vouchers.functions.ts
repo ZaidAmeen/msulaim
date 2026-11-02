@@ -355,6 +355,7 @@ export const addOutsourcing = createServerFn({ method: "POST" })
     await S.appendRows(S.OUTSOURCE_SHEET, [
       [data.date, data.partner, data.party, data.process, data.quantity, new Date().toISOString()],
     ]);
+    invalidateBoard();
     return { ok: true };
   });
 
@@ -386,6 +387,7 @@ export const addTransport = createServerFn({ method: "POST" })
     await S.appendRows(S.TRANSPORT_SHEET, [
       [data.date, data.partner, data.client, data.direction, data.boxes, data.bags, data.covers, data.notes, new Date().toISOString()],
     ]);
+    invalidateBoard();
     return { ok: true };
   });
 
