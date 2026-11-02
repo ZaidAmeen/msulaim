@@ -52,6 +52,7 @@ export async function appendRows(sheet: string, rows: (string | number)[][]) {
 }
 
 export const ARCHIVED_DELIVERY_SHEET = "ArchivedDeliveryVouchers";
+export const ARCHIVED_CLIENT_SHEET = "ArchivedClientVouchers";
 export const OUTSOURCE_SHEET = "Outsourcing";
 export const ARCHIVED_OUTSOURCE_SHEET = "ArchivedOutsourcing";
 export const HISTORY_SHEET = "StatementHistory";
@@ -60,6 +61,8 @@ export const TRANSPORT_SHEET = "Transport";
 export const ARCHIVED_TRANSPORT_SHEET = "ArchivedTransport";
 
 export const SHEET_HEADERS: Record<string, string[]> = {
+  [CLIENT_SHEET]: ["Voucher No", "Client", "Date", "Item", "Process", "Quantity", "Notes", "Created At", "Completed"],
+  [ARCHIVED_CLIENT_SHEET]: ["Voucher No", "Client", "Date", "Item", "Process", "Quantity", "Notes", "Created At", "Completed", "Archived At", "Statement ID"],
   [ARCHIVED_DELIVERY_SHEET]: ["Delivery No", "Client Voucher No", "Client", "Date", "Item", "Process", "Quantity", "Notes", "Created At", "Archived At", "Statement ID"],
   [OUTSOURCE_SHEET]: ["Date", "Partner", "Party", "Process", "Quantity", "Created At"],
   [ARCHIVED_OUTSOURCE_SHEET]: ["Date", "Partner", "Party", "Process", "Quantity", "Created At", "Archived At", "Statement ID"],
@@ -105,6 +108,46 @@ export async function ensureSheet(name: string) {
 export async function readSheet(name: string, cols: string): Promise<string[][]> {
   await ensureSheet(name);
   return readRange(`${name}!A2:${cols}`);
+}
+
+/** All ranges the board needs, fetched in ONE batchGet call. */
+export const BOARD_SHEETS = [
+  CLIENT_SHEET,
+  DELIVERY_SHEET,
+  ARCHIVED_DELIVERY_SHEET,
+  OUTSOURCE_SHEET,
+  HISTORY_SHEET,
+  OPTIONS_SHEET,
+  TRANSPORT_SHEET,
+] as const;
+
+const BOARD_RANGES = [
+  `${CLIENT_SHEET}!A2:I`,
+  `${DELIVERY_SHEET}!A2:I`,
+  `${ARCHIVED_DELIVERY_SHEET}!A2:K`,
+  `${OUTSOURCE_SHEET}!A2:F`,
+  `${HISTORY_SHEET}!A2:J`,
+  `${OPTIONS_SHEET}!A2:B`,
+  `${TRANSPORT_SHEET}!A2:I`,
+];
+
+/** One values:batchGet call for several ranges (1 API call instead of N). */
+export async function batchRead(ranges: string[]): Promise<string[][][]> {
+  const qs = ranges.map((r) => `ranges=${encodeURIComponent(r)}`).join("&");
+  const res = await fetch(
+    `${GATEWAY}/spreadsheets/${SPREADSHEET_ID}/values:batchGet?${qs}&majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE`,
+    { headers: headers() },
+  );
+  const json = (await handle(res)) as { valueRanges?: { values?: unknown[][] }[] };
+  const clean = (rows: unknown[][] | undefined) =>
+    (rows ?? []).map((row) => row.map((cell) => (cell == null ? "" : String(cell))));
+  return (json.valueRanges ?? []).map((vr) => clean(vr.values));
+}
+
+/** Ensure the board tabs exist, then read all of them in a single batch call. */
+export async function readBoardRaw(): Promise<string[][][]> {
+  for (const name of BOARD_SHEETS) await ensureSheet(name);
+  return batchRead(BOARD_RANGES);
 }
 
 /** Replace all data rows (below the header) of a tab. */
