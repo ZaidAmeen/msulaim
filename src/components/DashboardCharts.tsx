@@ -50,14 +50,17 @@ export function DashboardCharts({ board }: { board: Board }) {
     else e.Outwards += n;
     tp.set(t.partner, e);
   }
-  const trend = days.map((d) => ({ name: d.slice(8) + "/" + d.slice(5, 7), value: daily.get(d) ?? 0 }));
+  const trend = [...daily.entries()]
+    .filter(([d]) => d !== "")
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([d, value]) => ({ name: d.slice(8) + "/" + d.slice(5, 7), value }));
 
   return (
     <div className="grid gap-2.5 md:grid-cols-2">
-      <Card title="Sarees delivered · 14 days">
+      <Card title="Sarees delivered · all open work">
         <ResponsiveContainer>
           <BarChart data={trend}>
-            <XAxis dataKey="name" tick={axis} interval={1} />
+            <XAxis dataKey="name" tick={axis} interval={Math.max(0, Math.ceil(trend.length / 10) - 1)} />
             <YAxis tick={axis} width={28} allowDecimals={false} />
             <Tooltip />
             <Bar dataKey="value" name="Sarees" fill="var(--brand)" radius={[4, 4, 0, 0]} />

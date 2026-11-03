@@ -47,9 +47,8 @@ function Board() {
   const received = open.length;
   const issued = board.deliveryVouchers.filter((d) => !d.archived).length;
   const pending = open.filter((v) => statusOf(board, v) === "pending").length;
-  const month = new Date().toISOString().slice(0, 7);
-  const monthDelivered = board.deliveryVouchers
-    .filter((d) => !d.archived && isBaseProcess(d.process) && !Number.isNaN(new Date(d.date).getTime()) && new Date(d.date).toISOString().slice(0, 7) === month)
+  const delivered = board.deliveryVouchers
+    .filter((d) => !d.archived && isBaseProcess(d.process))
     .reduce((s, d) => s + num(d.quantity), 0);
   const outsourced = board.outsourcing.reduce((s, o) => s + num(o.quantity), 0);
   const pk = (dir: string) =>
