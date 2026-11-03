@@ -24,10 +24,8 @@ const toData = (m: Map<string, number>) => [...m.entries()].map(([name, value]) 
 const axis = { fontSize: 10, fill: "var(--inkmuted)" };
 
 export function DashboardCharts({ board }: { board: Board }) {
-  // Last 14 days of physical sarees delivered
-  const days: string[] = [];
-  for (let i = 13; i >= 0; i--) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10));
-  const daily = new Map(days.map((d) => [d, 0]));
+  // Every active (non-archived) delivery, day by day — no time window, all pending work.
+  const daily = new Map<string, number>();
   const clients = new Map<string, number>();
   const processes = new Map<string, number>();
   for (const d of board.deliveryVouchers.filter((x) => !x.archived)) {

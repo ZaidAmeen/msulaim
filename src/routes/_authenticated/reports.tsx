@@ -143,7 +143,7 @@ function Reports() {
             dateKey(a.date).localeCompare(dateKey(b.date)) ||
             voucherCompare(a.deliveryNo, b.deliveryNo),
         ),
-    [board, from, to, voucherInfo],
+    [board, from, to, voucherInfo, cleared],
   );
 
   const byClient = useMemo(() => {
