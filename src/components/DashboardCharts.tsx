@@ -24,10 +24,8 @@ const toData = (m: Map<string, number>) => [...m.entries()].map(([name, value]) 
 const axis = { fontSize: 10, fill: "var(--inkmuted)" };
 
 export function DashboardCharts({ board }: { board: Board }) {
-  // Last 14 days of physical sarees delivered
-  const days: string[] = [];
-  for (let i = 13; i >= 0; i--) days.push(new Date(Date.now() - i * 864e5).toISOString().slice(0, 10));
-  const daily = new Map(days.map((d) => [d, 0]));
+  // Every active (non-archived) delivery, day by day — no time window, all pending work.
+  const daily = new Map<string, number>();
   const clients = new Map<string, number>();
   const processes = new Map<string, number>();
   for (const d of board.deliveryVouchers.filter((x) => !x.archived)) {
@@ -52,14 +50,17 @@ export function DashboardCharts({ board }: { board: Board }) {
     else e.Outwards += n;
     tp.set(t.partner, e);
   }
-  const trend = days.map((d) => ({ name: d.slice(8) + "/" + d.slice(5, 7), value: daily.get(d) ?? 0 }));
+  const trend = [...daily.entries()]
+    .filter(([d]) => d !== "")
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([d, value]) => ({ name: d.slice(8) + "/" + d.slice(5, 7), value }));
 
   return (
     <div className="grid gap-2.5 md:grid-cols-2">
-      <Card title="Sarees delivered · 14 days">
+      <Card title="Sarees delivered · all open work">
         <ResponsiveContainer>
           <BarChart data={trend}>
-            <XAxis dataKey="name" tick={axis} interval={1} />
+            <XAxis dataKey="name" tick={axis} interval={Math.max(0, Math.ceil(trend.length / 10) - 1)} />
             <YAxis tick={axis} width={28} allowDecimals={false} />
             <Tooltip />
             <Bar dataKey="value" name="Sarees" fill="var(--brand)" radius={[4, 4, 0, 0]} />

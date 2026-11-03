@@ -1,4 +1,5 @@
-import type { Board, ClientVoucher } from "@/lib/vouchers.functions";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { setVoucherCompleted, type Board, type ClientVoucher } from "@/lib/vouchers.functions";
 import { fmtDate } from "@/lib/date-format";
 import { deliveriesFor, statusOf } from "@/lib/voucher-utils";
 
@@ -9,6 +10,12 @@ const styles = {
 } as const;
 
 export function VoucherCard({ board, voucher }: { board: Board; voucher: ClientVoucher }) {
+  const qc = useQueryClient();
+  const mark = useMutation({
+    mutationFn: (completed: boolean) =>
+      setVoucherCompleted({ data: { voucherNo: voucher.voucherNo, completed } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["board"] }),
+  });
   const status = statusOf(board, voucher);
   const s = styles[status];
   const linked = deliveriesFor(board, voucher.voucherNo);
@@ -49,6 +56,17 @@ export function VoucherCard({ board, voucher }: { board: Board; voucher: ClientV
         </span>
         <span className="font-semibold text-ink">Qty {voucher.quantity || "—"}</span>
       </div>
+
+      <label className="mt-3 flex w-fit items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-inkmuted cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-[var(--teal)] size-3.5"
+          checked={voucher.completed}
+          disabled={mark.isPending}
+          onChange={(e) => mark.mutate(e.target.checked)}
+        />
+        Fully delivered
+      </label>
     </article>
   );
 }

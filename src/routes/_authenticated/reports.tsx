@@ -5,7 +5,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
-import { num } from "@/lib/voucher-utils";
+import { isDelivered, num } from "@/lib/voucher-utils";
 import { deliveryKey } from "@/lib/vouchers.functions";
 import type { Statement } from "@/lib/statement";
 import { StatementPreview } from "@/components/StatementPreview";
@@ -97,10 +97,21 @@ function Reports() {
     return map;
   }, [board]);
 
+  /** Only fully-cleared vouchers appear on a statement: every item delivered or marked delivered. */
+  const cleared = useMemo(
+    () =>
+      new Set(
+        board.clientVouchers
+          .filter((v) => isDelivered(board, v))
+          .map((v) => v.voucherNo.trim().toLowerCase()),
+      ),
+    [board],
+  );
+
   const lines = useMemo<Line[]>(
     () =>
       board.deliveryVouchers
-        .filter((d) => !d.archived)
+        .filter((d) => !d.archived && cleared.has(d.clientVoucherNo.trim().toLowerCase()))
         .map((d) => {
           const vk = d.clientVoucherNo.trim().toLowerCase();
           const info =
@@ -132,7 +143,7 @@ function Reports() {
             dateKey(a.date).localeCompare(dateKey(b.date)) ||
             voucherCompare(a.deliveryNo, b.deliveryNo),
         ),
-    [board, from, to, voucherInfo],
+    [board, from, to, voucherInfo, cleared],
   );
 
   const byClient = useMemo(() => {

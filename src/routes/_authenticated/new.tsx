@@ -3,7 +3,7 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { boardQuery } from "@/lib/voucher-queries";
-import { addClientVoucher, addDeliveryVoucher } from "@/lib/vouchers.functions";
+import { addClientVoucher, addDeliveryVoucher, setVoucherCompleted } from "@/lib/vouchers.functions";
 import { itemStatus, num } from "@/lib/voucher-utils";
 import { CLIENTS, EXTRA_PROCESSES, ITEMS, withExisting } from "@/lib/options";
 
@@ -234,6 +234,8 @@ function DeliveryForm() {
   const [form, setForm] = useState({ clientVoucherNo: "", date: today(), notes: "", deliveryNo: "" });
   const [blocks, setBlocks] = useState<Block[]>([blankBlock()]);
   const [done, setDone] = useState(false);
+  /** For orders with no Finishing/Return — close the voucher right after issuing. */
+  const [markDone, setMarkDone] = useState(false);
 
   const source = board.clientVouchers.find((v) => v.voucherNo === form.clientVoucherNo);
   const status = source ? itemStatus(board, source) : [];
@@ -260,8 +262,8 @@ function DeliveryForm() {
   );
 
   const mutation = useMutation({
-    mutationFn: () =>
-      addDeliveryVoucher({
+    mutationFn: async () => {
+      await addDeliveryVoucher({
         data: {
           deliveryNo: form.deliveryNo,
           clientVoucherNo: form.clientVoucherNo,
@@ -270,12 +272,16 @@ function DeliveryForm() {
           notes: form.notes,
           lines,
         },
-      }),
+      });
+      if (markDone && source)
+        await setVoucherCompleted({ data: { voucherNo: source.voucherNo, completed: true } });
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["board"] });
       router.invalidate();
       setForm({ ...form, notes: "", deliveryNo: "" });
       setBlocks([blankBlock()]);
+      setMarkDone(false);
       setDone(true);
     },
   });
@@ -457,6 +463,16 @@ function DeliveryForm() {
         <Label>Notes</Label>
         <input className="field" value={form.notes} onChange={set("notes")} />
       </div>
+
+      <label className="flex w-fit items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-inkmuted cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-[var(--teal)] size-3.5"
+          checked={markDone}
+          onChange={(e) => setMarkDone(e.target.checked)}
+        />
+        No Finishing/Return left — mark voucher fully delivered
+      </label>
 
       <button
         disabled={
