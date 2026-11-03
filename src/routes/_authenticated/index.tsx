@@ -67,7 +67,7 @@ function Board() {
         <Stat label="Open" value={received} note="client vouchers" tone="text-branddeep" />
         <Stat label="Issued" value={issued} note="delivery vouchers" tone="text-tealdeep" />
         <Stat label="Pending" value={pending} note="needs link" tone="text-warn" />
-        <Stat label="This month" value={monthDelivered} note="sarees delivered" tone="text-branddeep" />
+        <Stat label="Delivered" value={delivered} note="sarees · open work" tone="text-branddeep" />
         <Stat label="Outsourced" value={outsourced} note="open pieces" tone="text-tealdeep" />
         <Stat label="Transport" value={pk("Inwards") + pk("Outwards")} note={`↓${pk("Inwards")} ↑${pk("Outwards")} pkgs`} tone="text-warn" />
       </div>
