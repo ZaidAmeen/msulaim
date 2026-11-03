@@ -464,6 +464,16 @@ function DeliveryForm() {
         <input className="field" value={form.notes} onChange={set("notes")} />
       </div>
 
+      <label className="flex w-fit items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-inkmuted cursor-pointer">
+        <input
+          type="checkbox"
+          className="accent-[var(--teal)] size-3.5"
+          checked={markDone}
+          onChange={(e) => setMarkDone(e.target.checked)}
+        />
+        No Finishing/Return left — mark voucher fully delivered
+      </label>
+
       <button
         disabled={
           mutation.isPending ||
