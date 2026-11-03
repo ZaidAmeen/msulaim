@@ -72,7 +72,16 @@ export type Board = {
   outsourcing: OutsourceEntry[];
   transport: TransportEntry[];
   history: StatementRecord[];
-  options: { partners: string[]; processes: string[]; transporters: string[] };
+  options: {
+    clients: string[];
+    items: string[];
+    /** Delivery processes beyond Finishing/Return (Blouse Stitch, Piping, …). */
+    processes: string[];
+    /** Outsourcing processes. */
+    outProcesses: string[];
+    partners: string[];
+    transporters: string[];
+  };
 };
 
 /** 45s server-side board cache; purged by every write so users always see fresh data. */
@@ -151,8 +160,11 @@ export const getBoard = createServerFn({ method: "GET" })
       }))
       .reverse(),
     options: {
+      clients: optRows.filter((r) => at(r, 0) === "client").map((r) => at(r, 1)),
+      items: optRows.filter((r) => at(r, 0) === "item").map((r) => at(r, 1)),
+      processes: optRows.filter((r) => at(r, 0) === "dprocess").map((r) => at(r, 1)),
+      outProcesses: optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1)),
       partners: optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1)),
-      processes: optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1)),
       transporters: optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1)),
     },
     transport: tRows
