@@ -72,6 +72,7 @@ export type Board = {
   outsourcing: OutsourceEntry[];
   transport: TransportEntry[];
   history: StatementRecord[];
+  business: { name: string; subtitle: string; location: string };
   options: {
     clients: string[];
     items: string[];
@@ -160,12 +161,17 @@ export const getBoard = createServerFn({ method: "GET" })
       }))
       .reverse(),
     options: {
-      clients: optRows.filter((r) => at(r, 0) === "client").map((r) => at(r, 1)),
-      items: optRows.filter((r) => at(r, 0) === "item").map((r) => at(r, 1)),
-      processes: optRows.filter((r) => at(r, 0) === "dprocess").map((r) => at(r, 1)),
-      outProcesses: optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1)),
-      partners: optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1)),
-      transporters: optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1)),
+      clients: dedupe(optRows.filter((r) => at(r, 0) === "client").map((r) => at(r, 1))),
+      items: dedupe(optRows.filter((r) => at(r, 0) === "item").map((r) => at(r, 1))),
+      processes: dedupe(optRows.filter((r) => at(r, 0) === "dprocess").map((r) => at(r, 1))),
+      outProcesses: dedupe(optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1))),
+      partners: dedupe(optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1))),
+      transporters: dedupe(optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1))),
+    },
+    business: {
+      name: optRows.filter((r) => at(r, 0) === "business_name").map((r) => at(r, 1)).at(-1) ?? "",
+      subtitle: optRows.filter((r) => at(r, 0) === "business_subtitle").map((r) => at(r, 1)).at(-1) ?? "",
+      location: optRows.filter((r) => at(r, 0) === "business_location").map((r) => at(r, 1)).at(-1) ?? "",
     },
     transport: tRows
       .filter((r) => at(r, 1) !== "")
