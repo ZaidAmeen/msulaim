@@ -3,6 +3,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAllowed } from "./access-middleware";
 import { z } from "zod";
 
+/** Case-insensitive de-duplication that keeps the first spelling. */
+function dedupe(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const t = v.trim();
+    if (!t || seen.has(t.toLowerCase())) continue;
+    seen.add(t.toLowerCase());
+    out.push(t);
+  }
+  return out;
+}
+
+
 export type ClientVoucher = {
   voucherNo: string;
   clientName: string;
