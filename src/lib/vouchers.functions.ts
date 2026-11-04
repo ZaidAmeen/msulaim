@@ -3,6 +3,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { requireAllowed } from "./access-middleware";
 import { z } from "zod";
 
+/** Case-insensitive de-duplication that keeps the first spelling. */
+function dedupe(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const t = v.trim();
+    if (!t || seen.has(t.toLowerCase())) continue;
+    seen.add(t.toLowerCase());
+    out.push(t);
+  }
+  return out;
+}
+
+
 export type ClientVoucher = {
   voucherNo: string;
   clientName: string;
@@ -72,6 +86,7 @@ export type Board = {
   outsourcing: OutsourceEntry[];
   transport: TransportEntry[];
   history: StatementRecord[];
+  business: { name: string; subtitle: string; location: string };
   options: {
     clients: string[];
     items: string[];
@@ -160,12 +175,17 @@ export const getBoard = createServerFn({ method: "GET" })
       }))
       .reverse(),
     options: {
-      clients: optRows.filter((r) => at(r, 0) === "client").map((r) => at(r, 1)),
-      items: optRows.filter((r) => at(r, 0) === "item").map((r) => at(r, 1)),
-      processes: optRows.filter((r) => at(r, 0) === "dprocess").map((r) => at(r, 1)),
-      outProcesses: optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1)),
-      partners: optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1)),
-      transporters: optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1)),
+      clients: dedupe(optRows.filter((r) => at(r, 0) === "client").map((r) => at(r, 1))),
+      items: dedupe(optRows.filter((r) => at(r, 0) === "item").map((r) => at(r, 1))),
+      processes: dedupe(optRows.filter((r) => at(r, 0) === "dprocess").map((r) => at(r, 1))),
+      outProcesses: dedupe(optRows.filter((r) => at(r, 0) === "process").map((r) => at(r, 1))),
+      partners: dedupe(optRows.filter((r) => at(r, 0) === "partner").map((r) => at(r, 1))),
+      transporters: dedupe(optRows.filter((r) => at(r, 0) === "transporter").map((r) => at(r, 1))),
+    },
+    business: {
+      name: optRows.filter((r) => at(r, 0) === "business_name").map((r) => at(r, 1)).at(-1) ?? "",
+      subtitle: optRows.filter((r) => at(r, 0) === "business_subtitle").map((r) => at(r, 1)).at(-1) ?? "",
+      location: optRows.filter((r) => at(r, 0) === "business_location").map((r) => at(r, 1)).at(-1) ?? "",
     },
     transport: tRows
       .filter((r) => at(r, 1) !== "")
@@ -537,4 +557,398 @@ export const finalizeStatement = createServerFn({ method: "POST" })
     ]);
     invalidateBoard();
     return { id, url: file.webViewLink };
+  });
+
+// ============= Masters (Options sheet) =============
+
+const OPTION_TYPES = ["client", "item", "dprocess", "process", "partner", "transporter"] as const;
+const optionSchema = z.object({
+  type: z.enum(OPTION_TYPES),
+  value: z.string().min(1).max(100),
+  /** When set (and different), the existing value is renamed to this. */
+  newValue: z.string().max(100).optional(),
+});
+
+/** Add a masters entry, or rename one when newValue is given. */
+export const saveOption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => optionSchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    await S.ensureSheet(S.OPTIONS_SHEET);
+    const rows = await S.readRange(`${S.OPTIONS_SHEET}!A2:B`);
+    const pad = (r: string[]) => [r[0] ?? "", r[1] ?? ""];
+    const norm = (v: string | undefined) => (v ?? "").trim().toLowerCase();
+    if (data.newValue && data.newValue.trim() && norm(data.newValue) !== norm(data.value)) {
+      const old = norm(data.value);
+      let hit = false;
+      const updated = rows.map((r) => {
+        const p = pad(r);
+        if (norm(p[0]) === data.type && norm(p[1]) === old) {
+          hit = true;
+          return [data.type, data.newValue.trim()];
+        }
+        return p;
+      });
+      if (!hit) updated.push([data.type, data.newValue.trim()]);
+      await S.rewriteRows(S.OPTIONS_SHEET, updated);
+      invalidateBoard();
+      return { ok: true };
+    }
+    const exists = rows.some((r) => norm(r[0]) === data.type && norm(r[1]) === norm(data.value));
+    if (exists) return { ok: true };
+    await S.appendRows(S.OPTIONS_SHEET, [[data.type, data.value.trim()]]);
+    invalidateBoard();
+    return { ok: true };
+  });
+
+export const deleteOption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) =>
+    z.object({ type: z.enum(OPTION_TYPES), value: z.string().min(1) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.OPTIONS_SHEET}!A2:B`);
+    const norm = (v: string | undefined) => (v ?? "").trim().toLowerCase();
+    const kept = rows.filter(
+      (r) => !(norm(r[0]) === data.type && norm(r[1]) === norm(data.value)),
+    );
+    if (kept.length === rows.length) return { ok: true };
+    await S.rewriteRows(S.OPTIONS_SHEET, kept.map((r) => [r[0] ?? "", r[1] ?? ""]));
+    invalidateBoard();
+    return { ok: true };
+  });
+
+// ============= Business identity (system-wide) =============
+
+export const saveBusiness = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        name: z.string().min(1).max(120),
+        subtitle: z.string().max(120).default(""),
+        location: z.string().max(120).default(""),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    await S.ensureSheet(S.OPTIONS_SHEET);
+    const rows = await S.readRange(`${S.OPTIONS_SHEET}!A2:B`);
+    const norm = (v: string | undefined) => (v ?? "").trim().toLowerCase();
+    const entries: [string, string][] = [
+      ["business_name", data.name.trim()],
+      ["business_subtitle", data.subtitle.trim()],
+      ["business_location", data.location.trim()],
+    ];
+    const updated = rows.map((r) => {
+      const t = norm(r[0]);
+      const hit = entries.find(([type]) => type === t);
+      return hit ? [hit[0], hit[1]] : [r[0] ?? "", r[1] ?? ""];
+    });
+    for (const [type, value] of entries) {
+      if (!updated.some((r) => norm(r[0]) === type)) updated.push([type, value]);
+    }
+    await S.rewriteRows(S.OPTIONS_SHEET, updated);
+    invalidateBoard();
+    return { ok: true };
+  });
+
+// ============= Edit / delete: client vouchers =============
+
+const editClientSchema = z.object({
+  voucherNo: z.string().min(1),
+  clientName: z.string().min(1),
+  date: z.string().min(1),
+  notes: z.string().max(500).default(""),
+  items: z.array(z.object({ item: z.string().min(1), quantity: z.string().min(1) })).min(1),
+});
+
+const toNum = (v: string | undefined) => {
+  const n = Number(String(v ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+const isBase = (p: string | undefined) => {
+  const t = (p ?? "").trim().toLowerCase();
+  return t === "" || t === "finishing" || t === "return";
+};
+const padW = (r: string[], w: number) => Array.from({ length: w }, (_, i) => r[i] ?? "");
+
+export const editClientVoucher = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => editClientSchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const key = data.voucherNo.trim().toLowerCase();
+    const rows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+    const mine = rows.filter((r) => (r[0] ?? "").trim().toLowerCase() === key);
+    if (!mine.length) throw new Error(`Client voucher ${data.voucherNo} not found.`);
+    const seen = new Set<string>();
+    for (const i of data.items) {
+      const ik = i.item.trim().toLowerCase();
+      if (seen.has(ik)) throw new Error("Each item can only be listed once.");
+      seen.add(ik);
+      if (toNum(i.quantity) <= 0) throw new Error("Quantities must be greater than 0.");
+    }
+    const [activeRows, archivedRows] = await Promise.all([
+      S.readRange(`${S.DELIVERY_SHEET}!A2:G`),
+      S.readSheet(S.ARCHIVED_DELIVERY_SHEET, "G"),
+    ]);
+    for (const i of data.items) {
+      const ik = i.item.trim().toLowerCase();
+      const single = data.items.length === 1;
+      const delivered = [...activeRows, ...archivedRows]
+        .filter((r) => (r[1] ?? "").trim().toLowerCase() === key && isBase(r[5]))
+        .filter((r) => {
+          const di = (r[4] ?? "").trim().toLowerCase();
+          return di === ik || (single && di === "");
+        })
+        .reduce((s, r) => s + toNum(r[6]), 0);
+      if (delivered > toNum(i.quantity))
+        throw new Error(
+          `${i.item}: ${delivered} already delivered — the new quantity cannot be lower.`,
+        );
+    }
+    const createdAt = mine[0][7] || new Date().toISOString();
+    const completed = (mine[0][8] ?? "").trim().toLowerCase() === "yes" ? "yes" : "";
+    const newRows = data.items.map((i) => [
+      data.voucherNo,
+      data.clientName,
+      data.date,
+      i.item,
+      "",
+      i.quantity,
+      data.notes,
+      createdAt,
+      completed,
+    ]);
+    const updated = [
+      ...rows.filter((r) => (r[0] ?? "").trim().toLowerCase() !== key).map((r) => padW(r, 9)),
+      ...newRows,
+    ];
+    await S.rewriteRows(S.CLIENT_SHEET, updated);
+    invalidateBoard();
+    return { ok: true };
+  });
+
+export const deleteClientVoucher = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => z.object({ voucherNo: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const key = data.voucherNo.trim().toLowerCase();
+    const rows = await S.readRange(`${S.CLIENT_SHEET}!A2:I`);
+    const mine = rows.filter((r) => (r[0] ?? "").trim().toLowerCase() === key);
+    if (!mine.length) throw new Error(`Client voucher ${data.voucherNo} not found.`);
+    const active = await S.readRange(`${S.DELIVERY_SHEET}!A2:B`);
+    if (active.some((r) => (r[1] ?? "").trim().toLowerCase() === key))
+      throw new Error("Delete this voucher's delivery vouchers first.");
+    await S.rewriteRows(
+      S.CLIENT_SHEET,
+      rows.filter((r) => (r[0] ?? "").trim().toLowerCase() !== key).map((r) => padW(r, 9)),
+    );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+// ============= Edit / delete: delivery rows =============
+
+const editDeliverySchema = z.object({
+  key: z.string().min(1),
+  deliveryNo: z.string().min(1),
+  date: z.string().min(1),
+  notes: z.string().max(500).default(""),
+  quantity: z.string().min(1),
+});
+
+const deliveryRowKey = (r: string[]) =>
+  [r[8], r[0], r[4], r[5], r[6]].map((v) => v ?? "").join("|");
+
+export const editDelivery = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => editDeliverySchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.DELIVERY_SHEET}!A2:I`);
+    const idx = rows.findIndex((r) => deliveryRowKey(padW(r, 9)) === data.key);
+    if (idx < 0)
+      throw new Error("This delivery row changed or no longer exists. Refresh and try again.");
+    if (toNum(data.quantity) <= 0) throw new Error("Quantity must be greater than 0.");
+    const row = padW(rows[idx], 9);
+    const vk = (row[1] ?? "").trim().toLowerCase();
+    const ik = (row[4] ?? "").trim().toLowerCase();
+    if (isBase(row[5])) {
+      const [cRows, activeRows, archivedRows] = await Promise.all([
+        S.readRange(`${S.CLIENT_SHEET}!A2:F`),
+        S.readRange(`${S.DELIVERY_SHEET}!A2:G`),
+        S.readSheet(S.ARCHIVED_DELIVERY_SHEET, "G"),
+      ]);
+      const srcRows = cRows.filter((r) => (r[0] ?? "").trim().toLowerCase() === vk);
+      if (srcRows.length) {
+        const single = srcRows.length === 1;
+        const ordered = srcRows
+          .filter((r) => {
+            const ci = (r[3] ?? "").trim().toLowerCase();
+            return ci === ik || (single && ci === "");
+          })
+          .reduce((s, r) => s + toNum(r[5]), 0);
+        const others = [
+          ...activeRows.filter((_, i) => i !== idx),
+          ...archivedRows,
+        ]
+          .filter((r) => (r[1] ?? "").trim().toLowerCase() === vk && isBase(r[5]))
+          .filter((r) => {
+            const di = (r[4] ?? "").trim().toLowerCase();
+            return di === ik || (single && di === "");
+          })
+          .reduce((s, r) => s + toNum(r[6]), 0);
+        if (toNum(data.quantity) + others > ordered)
+          throw new Error(
+            `Only ${Math.max(0, ordered - others)} left to deliver on voucher ${row[1]}.`,
+          );
+      }
+    }
+    const newRow = [
+      data.deliveryNo,
+      row[1],
+      row[2],
+      data.date,
+      row[4],
+      row[5],
+      data.quantity,
+      data.notes,
+      row[8],
+    ];
+    await S.rewriteRows(
+      S.DELIVERY_SHEET,
+      rows.map((r, i) => (i === idx ? newRow : padW(r, 9))),
+    );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+export const deleteDelivery = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => z.object({ key: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.DELIVERY_SHEET}!A2:I`);
+    const kept = rows.filter((r) => deliveryRowKey(padW(r, 9)) !== data.key);
+    if (kept.length === rows.length)
+      throw new Error("This delivery row changed or no longer exists. Refresh and try again.");
+    await S.rewriteRows(S.DELIVERY_SHEET, kept.map((r) => padW(r, 9)));
+    invalidateBoard();
+    return { ok: true };
+  });
+
+// ============= Edit / delete: outsourcing rows =============
+
+const editOutsourceSchema = z.object({
+  key: z.string().min(1),
+  date: z.string().min(1),
+  partner: z.string().trim().min(1).max(100),
+  party: z.string().trim().min(1).max(100),
+  process: z.string().trim().min(1).max(100),
+  quantity: z.string().regex(/^[0-9]+$/),
+});
+
+const outsourceRowKey = (r: string[]) =>
+  [r[5], r[1], r[2], r[3], r[4]].map((v) => v ?? "").join("|");
+
+export const editOutsourcingEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => editOutsourceSchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    if (toNum(data.quantity) <= 0) throw new Error("Quantity must be greater than 0.");
+    const rows = await S.readRange(`${S.OUTSOURCE_SHEET}!A2:F`);
+    const idx = rows.findIndex((r) => outsourceRowKey(padW(r, 6)) === data.key);
+    if (idx < 0)
+      throw new Error("This entry changed or no longer exists. Refresh and try again.");
+    const createdAt = padW(rows[idx], 6)[5];
+    const newRow = [data.date, data.partner, data.party, data.process, data.quantity, createdAt];
+    await S.rewriteRows(
+      S.OUTSOURCE_SHEET,
+      rows.map((r, i) => (i === idx ? newRow : padW(r, 6))),
+    );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+export const deleteOutsourcingEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => z.object({ key: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.OUTSOURCE_SHEET}!A2:F`);
+    const kept = rows.filter((r) => outsourceRowKey(padW(r, 6)) !== data.key);
+    if (kept.length === rows.length)
+      throw new Error("This entry changed or no longer exists. Refresh and try again.");
+    await S.rewriteRows(S.OUTSOURCE_SHEET, kept.map((r) => padW(r, 6)));
+    invalidateBoard();
+    return { ok: true };
+  });
+
+// ============= Edit / delete: transport rows =============
+
+const editTransportSchema = z.object({
+  key: z.string().min(1),
+  date: z.string().min(1),
+  partner: z.string().trim().min(1).max(100),
+  client: z.string().trim().min(1).max(100),
+  direction: z.enum(["Inwards", "Outwards"]),
+  boxes: z.string().regex(/^[0-9]*$/).default(""),
+  bags: z.string().regex(/^[0-9]*$/).default(""),
+  covers: z.string().regex(/^[0-9]*$/).default(""),
+  notes: z.string().max(500).default(""),
+});
+
+const transportRowKey = (r: string[]) =>
+  [r[8], r[1], r[2], r[3], r[4], r[5], r[6]].map((v) => v ?? "").join("|");
+
+export const editTransportEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => editTransportSchema.parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const total = toNum(data.boxes) + toNum(data.bags) + toNum(data.covers);
+    if (total <= 0) throw new Error("Enter at least one box, bag or cover.");
+    const rows = await S.readRange(`${S.TRANSPORT_SHEET}!A2:I`);
+    const idx = rows.findIndex((r) => transportRowKey(padW(r, 9)) === data.key);
+    if (idx < 0)
+      throw new Error("This entry changed or no longer exists. Refresh and try again.");
+    const createdAt = padW(rows[idx], 9)[8];
+    const newRow = [
+      data.date,
+      data.partner,
+      data.client,
+      data.direction,
+      data.boxes,
+      data.bags,
+      data.covers,
+      data.notes,
+      createdAt,
+    ];
+    await S.rewriteRows(
+      S.TRANSPORT_SHEET,
+      rows.map((r, i) => (i === idx ? newRow : padW(r, 9))),
+    );
+    invalidateBoard();
+    return { ok: true };
+  });
+
+export const deleteTransportEntry = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth, requireAllowed])
+  .inputValidator((d: unknown) => z.object({ key: z.string().min(1) }).parse(d))
+  .handler(async ({ data }) => {
+    const S = await import("./sheets.server");
+    const rows = await S.readRange(`${S.TRANSPORT_SHEET}!A2:I`);
+    const kept = rows.filter((r) => transportRowKey(padW(r, 9)) !== data.key);
+    if (kept.length === rows.length)
+      throw new Error("This entry changed or no longer exists. Refresh and try again.");
+    await S.rewriteRows(S.TRANSPORT_SHEET, kept.map((r) => padW(r, 9)));
+    invalidateBoard();
+    return { ok: true };
   });
