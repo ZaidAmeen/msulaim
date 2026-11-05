@@ -579,18 +579,19 @@ export const saveOption = createServerFn({ method: "POST" })
     const rows = await S.readRange(`${S.OPTIONS_SHEET}!A2:B`);
     const pad = (r: string[]) => [r[0] ?? "", r[1] ?? ""];
     const norm = (v: string | undefined) => (v ?? "").trim().toLowerCase();
-    if (data.newValue && data.newValue.trim() && norm(data.newValue) !== norm(data.value)) {
+    const nv = (data.newValue ?? "").trim();
+    if (nv && norm(data.newValue ?? "") !== norm(data.value)) {
       const old = norm(data.value);
       let hit = false;
       const updated = rows.map((r) => {
         const p = pad(r);
         if (norm(p[0]) === data.type && norm(p[1]) === old) {
           hit = true;
-          return [data.type, data.newValue.trim()];
+          return [data.type, nv];
         }
         return p;
       });
-      if (!hit) updated.push([data.type, data.newValue.trim()]);
+      if (!hit) updated.push([data.type, nv]);
       await S.rewriteRows(S.OPTIONS_SHEET, updated);
       invalidateBoard();
       return { ok: true };
@@ -674,7 +675,8 @@ const isBase = (p: string | undefined) => {
   const t = (p ?? "").trim().toLowerCase();
   return t === "" || t === "finishing" || t === "return";
 };
-const padW = (r: string[], w: number) => Array.from({ length: w }, (_, i) => r[i] ?? "");
+const padW = (r: readonly (string | undefined)[], w: number): string[] =>
+  Array.from({ length: w }, (_, i) => r[i] ?? "");
 
 export const editClientVoucher = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth, requireAllowed])
@@ -711,8 +713,9 @@ export const editClientVoucher = createServerFn({ method: "POST" })
           `${i.item}: ${delivered} already delivered — the new quantity cannot be lower.`,
         );
     }
-    const createdAt = mine[0][7] || new Date().toISOString();
-    const completed = (mine[0][8] ?? "").trim().toLowerCase() === "yes" ? "yes" : "";
+    const first = mine[0] ?? [];
+    const createdAt = first[7] || new Date().toISOString();
+    const completed = (first[8] ?? "").trim().toLowerCase() === "yes" ? "yes" : "";
     const newRows = data.items.map((i) => [
       data.voucherNo,
       data.clientName,
@@ -776,7 +779,7 @@ export const editDelivery = createServerFn({ method: "POST" })
     if (idx < 0)
       throw new Error("This delivery row changed or no longer exists. Refresh and try again.");
     if (toNum(data.quantity) <= 0) throw new Error("Quantity must be greater than 0.");
-    const row = padW(rows[idx], 9);
+    const row = padW(rows[idx] ?? [], 9);
     const vk = (row[1] ?? "").trim().toLowerCase();
     const ik = (row[4] ?? "").trim().toLowerCase();
     if (isBase(row[5])) {
@@ -812,14 +815,14 @@ export const editDelivery = createServerFn({ method: "POST" })
     }
     const newRow = [
       data.deliveryNo,
-      row[1],
-      row[2],
+      row[1] ?? "",
+      row[2] ?? "",
       data.date,
-      row[4],
-      row[5],
+      row[4] ?? "",
+      row[5] ?? "",
       data.quantity,
       data.notes,
-      row[8],
+      row[8] ?? "",
     ];
     await S.rewriteRows(
       S.DELIVERY_SHEET,
@@ -867,7 +870,7 @@ export const editOutsourcingEntry = createServerFn({ method: "POST" })
     const idx = rows.findIndex((r) => outsourceRowKey(padW(r, 6)) === data.key);
     if (idx < 0)
       throw new Error("This entry changed or no longer exists. Refresh and try again.");
-    const createdAt = padW(rows[idx], 6)[5];
+    const createdAt = padW(rows[idx] ?? [], 6)[5];
     const newRow = [data.date, data.partner, data.party, data.process, data.quantity, createdAt];
     await S.rewriteRows(
       S.OUTSOURCE_SHEET,
@@ -919,7 +922,7 @@ export const editTransportEntry = createServerFn({ method: "POST" })
     const idx = rows.findIndex((r) => transportRowKey(padW(r, 9)) === data.key);
     if (idx < 0)
       throw new Error("This entry changed or no longer exists. Refresh and try again.");
-    const createdAt = padW(rows[idx], 9)[8];
+    const createdAt = padW(rows[idx] ?? [], 9)[8];
     const newRow = [
       data.date,
       data.partner,
