@@ -870,7 +870,7 @@ export const editOutsourcingEntry = createServerFn({ method: "POST" })
     const idx = rows.findIndex((r) => outsourceRowKey(padW(r, 6)) === data.key);
     if (idx < 0)
       throw new Error("This entry changed or no longer exists. Refresh and try again.");
-    const createdAt = padW(rows[idx] ?? [], 6)[5];
+    const createdAt = padW(rows[idx] ?? [], 6)[5] ?? "";
     const newRow = [data.date, data.partner, data.party, data.process, data.quantity, createdAt];
     await S.rewriteRows(
       S.OUTSOURCE_SHEET,
@@ -922,7 +922,7 @@ export const editTransportEntry = createServerFn({ method: "POST" })
     const idx = rows.findIndex((r) => transportRowKey(padW(r, 9)) === data.key);
     if (idx < 0)
       throw new Error("This entry changed or no longer exists. Refresh and try again.");
-    const createdAt = padW(rows[idx] ?? [], 9)[8];
+    const createdAt = padW(rows[idx] ?? [], 9)[8] ?? "";
     const newRow = [
       data.date,
       data.partner,
