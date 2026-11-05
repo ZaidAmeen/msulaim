@@ -212,3 +212,53 @@
     color: var(--color-foreground);
   }
 }
+
+/* Side drawer panel */
+.drawer {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.84));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-right: 1px solid rgb(255 255 255 / 0.6);
+  box-shadow: 24px 0 60px -30px #0e224455;
+}
+
+/* ---- Dark mode: ink-ledger glass ---- */
+.dark {
+  --frost: oklch(0.27 0.033 262);
+  --frostline: oklch(0.45 0.045 262);
+  --ink: oklch(0.93 0.012 260);
+  --inkmuted: oklch(0.72 0.03 261);
+  --warnsoft: oklch(0.38 0.06 60);
+  --primary: var(--brand);
+  --primary-foreground: oklch(1 0 0);
+}
+
+.dark .frost {
+  background: linear-gradient(180deg, rgb(40 49 70 / 0.72), rgb(25 32 49 / 0.58));
+  border-color: rgb(255 255 255 / 0.08);
+}
+
+.dark .glass {
+  background: linear-gradient(180deg, rgb(42 51 72 / 0.6), rgb(27 34 52 / 0.45));
+  border-color: rgb(255 255 255 / 0.07);
+}
+
+.dark .appbg {
+  background:
+    radial-gradient(120% 40% at 15% 0%, #16233d 0%, rgba(22, 35, 61, 0) 55%),
+    radial-gradient(120% 40% at 100% 0%, #10262b 0%, rgba(16, 38, 43, 0) 50%),
+    linear-gradient(180deg, #10141f 0%, #0d1119 45%, #131a28 100%);
+  background-attachment: fixed;
+}
+
+.dark .field {
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.12);
+  color: var(--ink);
+}
+
+.dark .drawer {
+  background: linear-gradient(180deg, rgb(24 30 46 / 0.96), rgb(18 23 36 / 0.92));
+  border-color: rgb(255 255 255 / 0.08);
+  box-shadow: 24px 0 60px -30px #00000088;
+}

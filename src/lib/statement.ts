@@ -16,7 +16,17 @@ export type Statement = {
   grand: number;
   /** Row identifiers used to archive exactly these rows. */
   keys: string[];
+  /** Editable business identity; falls back to the built-in brand. */
+  business?: { name: string; subtitle: string; location: string };
 };
+
+export function bizOf(s: Pick<Statement, "business">) {
+  return {
+    name: s.business?.name || BUSINESS.name,
+    subtitle: s.business?.subtitle || BUSINESS.tagline,
+    location: s.business?.location || BUSINESS.location,
+  };
+}
 
 const dmy = (d: string) => (d ? fmtDate(d).replace(/\//g, "-") : "");
 
@@ -72,13 +82,14 @@ export async function statementPdf(s: Statement): Promise<Blob> {
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const w = doc.internal.pageSize.getWidth();
+  const biz = bizOf(s);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text(BUSINESS.name, w / 2, 46, { align: "center" });
+  doc.text(biz.name, w / 2, 46, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(BUSINESS.tagline, w / 2, 62, { align: "center" });
-  doc.text(BUSINESS.location, w / 2, 75, { align: "center" });
+  doc.text(biz.subtitle, w / 2, 62, { align: "center" });
+  doc.text(biz.location, w / 2, 75, { align: "center" });
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.text(s.title, w / 2, 98, { align: "center" });
