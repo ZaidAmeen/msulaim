@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { BUSINESS, MONTHS } from "@/lib/brand";
+import { MONTHS } from "@/lib/brand";
+import { bizOf } from "@/lib/statement";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -85,8 +86,8 @@ export function StatementPreview({
         {s && (
           <>
             <div className="text-center space-y-0.5">
-              <DialogTitle className="font-display text-[20px] font-bold">{BUSINESS.name}</DialogTitle>
-              <div className="text-[11px] text-inkmuted">{BUSINESS.tagline} · {BUSINESS.location}</div>
+              <DialogTitle className="font-display text-[20px] font-bold">{bizOf(s).name}</DialogTitle>
+              <div className="text-[11px] text-inkmuted">{bizOf(s).subtitle} · {bizOf(s).location}</div>
               <div className="font-display text-[14px] font-semibold">{s.title}</div>
             </div>
             <div className="text-[12px] font-semibold">

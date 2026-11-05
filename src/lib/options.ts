@@ -19,6 +19,14 @@ export function withExisting(preset: readonly string[], existing: string[]): str
   return out;
 }
 
+/**
+ * Masters-managed lists: once the sheet holds values for a type, the sheet is
+ * the source of truth; presets are only the starting defaults.
+ */
+export function presetOrExisting(preset: readonly string[], sheetValues: string[]): string[] {
+  return sheetValues.length ? withExisting([], sheetValues) : [...preset];
+}
+
 /** Processes that count toward physical sarees delivered. */
 export const BASE_PROCESSES = ["Finishing", "Return"] as const;
 /** Additional work — recorded but does not reduce the remaining quantity. */

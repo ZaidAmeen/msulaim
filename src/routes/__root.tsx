@@ -124,6 +124,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
+  // Restore the saved theme before anything paints meaningfully.
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", localStorage.getItem("ms-theme") === "dark");
+  }, []);
+
   // Keep the router and query cache in sync with auth state transitions.
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
