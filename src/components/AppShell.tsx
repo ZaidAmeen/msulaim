@@ -17,7 +17,8 @@ const DRAWER_ITEMS = [
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts.length >= 2)
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "MS";
   return name.slice(0, 2).toUpperCase();
 }
 
