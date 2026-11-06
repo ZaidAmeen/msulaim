@@ -1,14 +1,20 @@
 # Roadmap
 
-- [x] Business branding in app header + PDFs
-- [x] Custom file names
-- [x] Transport module
-- [x] Transport on dashboard and History tab
-- [ ] 1. Login (email + password), invite-only allowlist (zaidameen116@gmail.com)
-- [ ] 2. Drive PDFs viewable by anyone with link
-- [ ] 3. Master tab: view/edit/delete clients, items, processes, partners
-- [ ] 4. Edit/delete for every entry (vouchers, deliveries, outsourcing, transport)
-- [ ] 5. Metrics/charts show all pending (non-finalized) data, no day windows
-- [ ] 6. App navigation: fixed header (company name → dashboard), bottom nav (Dashboard, +, Client vouchers), left drawer, custom logo
-- [ ] 7. Settings: profile, password change, dark mode
-- [ ] 8. Settings: edit company name/subtitle system-wide
+## Completed
+- [x] Email/password authentication with allowlist and protected work screens.
+- [x] Google Sheets batching/cache and Drive statement archive workflow.
+- [x] Transport intake, reports, history and dashboard metrics.
+- [x] Branded fixed header, drawer and bottom navigation.
+- [x] Pending-work metrics without short date windows; archived work excluded.
+- [x] Server-side save, edit and delete functions for active voucher, delivery, outsourcing and transport records.
+- [x] Server-side Masters and business identity save functions.
+
+## In progress
+- [ ] Masters screen: manage clients, items, delivery/outsourcing processes, partners and transporters.
+- [ ] Settings screen: profile details, password change, dark mode and business identity.
+- [ ] Edit/delete controls for each active record type in its work list.
+- [ ] Offline intake queue with sequential sync when connection returns; statement archiving remains online-only.
+
+## Later verification
+- [ ] Verify finalized Drive PDFs can be opened by anyone with the link.
+- [ ] End-to-end sign-in, edit/delete, Masters, Settings and offline sync checks.
